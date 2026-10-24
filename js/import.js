@@ -14,13 +14,24 @@ export function readPayloadFromHtml(html) {
   } catch (e) {
     throw new Error('El archivo trae la letra dañada.');
   }
-  if (!d || !Array.isArray(d.lines) || !d.lines.length) throw new Error('Ese archivo todavía no trae letra (es el motor vacío). Elige el que descargaste con tu letra.');
+  if (d?.v === 3 && typeof d.text === 'string' && Array.isArray(d.sync)) {
+    const phrases = d.text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (!phrases.length) throw new Error('Ese proyecto no contiene letra.');
+    const lines = phrases.map((text, i) => {
+      const s = d.sync[i];
+      const t = Number.isFinite(s?.t) ? s.t : null;
+      return [t, text, Array.isArray(s?.wt) && s.wt.every(Number.isFinite) ? s.wt : undefined, Array.isArray(s?.wd) ? s.wd : undefined];
+    });
+    return { intro: d.intro ?? 'para ti', outro: d.outro ?? '', seed: d.seed | 0, lines,
+      project: { text: phrases.join('\n'), sync: d.sync, style: d.style, over: d.over, offset: d.offset } };
+  }
+  if (!d || !Array.isArray(d.lines) || !d.lines.length) throw new Error('Ese archivo no es un proyecto compatible de Letras ASCII o no contiene letra.');
   return {
     intro: d.intro ?? 'para ti',
     outro: d.outro ?? '',
     seed: d.seed | 0,
     lines: d.lines
-      .filter((l) => Array.isArray(l) && typeof l[1] === 'string' && l[1].trim())
+      .filter((l) => Array.isArray(l) && Number.isFinite(+l[0]) && typeof l[1] === 'string' && l[1].trim())
       .map((l) => [+l[0], l[1].trim(), Array.isArray(l[2]) ? l[2].map(Number) : undefined]),
   };
 }
@@ -96,9 +107,10 @@ export function parseTimed(text, filename = '') {
   const t = text.replace(/^﻿/, '');
   const isCue = /-->/.test(t) && (/\.(srt|vtt)$/i.test(filename) || !/\[\d{1,3}:\d{2}/.test(t));
   const rows = isCue ? parseCues(t) : parseLrc(t);
-  rows.sort((a, b) => a.t - b.t);
-  if (!rows.length) throw new Error('No encontré tiempos en ese archivo. Necesito un .lrc, .srt o .vtt.');
-  return rows;
+  const valid = rows.filter((r) => Number.isFinite(r.t) && r.t >= 0);
+  valid.sort((a, b) => a.t - b.t);
+  if (!valid.length) throw new Error('No encontré tiempos válidos en ese archivo. Necesito un .lrc, .srt o .vtt.');
+  return valid;
 }
 
 // Pasa a "líneas" del motor aplicando el segundo en que empieza el fragmento y recortando a la canción.
@@ -131,6 +143,7 @@ export function readFileText(accept) {
       rd.onerror = () => reject(new Error('No pude leer ese archivo.'));
       rd.readAsText(f);
     });
+    inp.addEventListener('cancel', () => { inp.remove(); reject(new Error('cancelado')); }, { once: true });
     document.body.append(inp);
     inp.click();
   });
@@ -141,6 +154,6 @@ export function parseClock(s) {
   const t = String(s).trim().replace(',', '.');
   if (!t) return 0;
   const p = t.split(':').map(Number);
-  if (p.some((x) => Number.isNaN(x))) return NaN;
+  if (p.some((x) => !Number.isFinite(x))) return NaN;
   return p.length === 1 ? p[0] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 3600 + p[1] * 60 + p[2];
 }

@@ -18,13 +18,14 @@ export function serve(root) {
   return { srv, port: srv.address().port };
 }
 export async function launch(opts = {}) {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', ...(opts.args || [])] });
+  const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || chromium.executablePath(), args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', ...(opts.args || [])] });
   return b;
 }
 export function watch(page, errs) {
   page.on('pageerror', (e) => errs.push('pageerror: ' + String(e)));
   page.on('console', (m) => {
-    if (m.type() === 'error') errs.push('console: ' + m.text());
+    if (m.type() === 'error') errs.push('console: ' + m.text() + ' ' + (m.location().url || ''));
   });
+  page.on('response', (r) => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ': ' + r.url()); });
   page.on('requestfailed', (r) => { if (!r.url().startsWith('blob:')) errs.push('reqfail: ' + r.url().slice(0, 80)); });
 }

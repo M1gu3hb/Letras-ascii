@@ -27,8 +27,6 @@ function build() {
   const scan = (axis) => {
     const step = 0.03;
     const ra = axis === 0 ? [-1.5, 1.5] : axis === 1 ? [-1.0, 1.0] : [-1.4, 1.7];
-    const A = axis === 0 ? 1 : 0; // ejes de la rejilla
-    const B = axis === 2 ? 1 : 2;
     const lim = [
       [-1.4, 1.4],
       [-0.9, 0.9],

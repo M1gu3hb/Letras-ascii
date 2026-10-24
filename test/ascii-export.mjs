@@ -1,7 +1,7 @@
 // El HTML exportado conserva el aspecto del ASCII (grosor, espacio, tamaño, detalle, negrita, relleno, halo, intensidad),
 // incluido el grosor por palabra. Se abre desde disco en un teléfono. Solo texto de prueba inventado.
 import { serve, launch, watch } from './lib.mjs';
-import { statSync, mkdirSync } from 'node:fs';
+import { statSync, mkdirSync, copyFileSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });
 const { srv, port } = serve('site');
 const b = await launch();
@@ -49,7 +49,8 @@ const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, deviceS
 const p2 = await ctx2.newPage();
 const e2 = [];
 watch(p2, e2);
-await p2.goto('file://' + process.cwd() + '/' + path);
+copyFileSync(path, 'site/ascii-export-test.html');
+await p2.goto(`http://localhost:${port}/ascii-export-test.html`);
 await p2.waitForFunction(() => document.documentElement.classList.contains('ready'), null, { timeout: 20000 });
 await p2.waitForTimeout(1200);
 const f = await p2.evaluate(() => {

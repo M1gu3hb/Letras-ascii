@@ -118,12 +118,30 @@ export function newProject() {
 
 // completa lo que falte (proyectos viejos o a medias)
 export function normalize(p) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) p = {};
   const d = newProject();
   const out = { ...d, ...p, style: { ...d.style, ...(p.style || {}) }, clip: { ...d.clip, ...(p.clip || {}) } };
-  out.style.faces = (out.style.faces || []).filter((f) => FACE_NAMES.includes(f));
+  out.text = typeof p.text === 'string' ? p.text.slice(0, 100000) : '';
+  for (const key of ['name', 'intro', 'outro']) out[key] = typeof out[key] === 'string' ? out[key].slice(0, key === 'name' ? 60 : 200) : d[key];
+  out.style.faces = (Array.isArray(out.style.faces) ? out.style.faces : []).filter((f) => FACE_NAMES.includes(f));
   if (!out.style.faces.length) out.style.faces = FACE_NAMES.slice();
+  for (const key of ['fxSet']) out.style[key] = Array.isArray(out.style[key]) ? out.style[key].filter((k) => Object.hasOwn(WORDFX_LABELS, k)) : d.style[key];
+  const ranges = { thick: [-1,1], track: [-.06,.3], size: [.6,1.3], detail: [.6,1.8], glow: [0,2], bright: [.6,1.5], random: [0,1], fxAuto: [0,1], react: [0,2], holdMin: [.3,1.5] };
+  for (const [key, [lo, hi]] of Object.entries(ranges)) {
+    const value = out.style[key];
+    if (value !== undefined) out.style[key] = Number.isFinite(value) ? Math.max(lo, Math.min(hi,value)) : d.style[key];
+  }
+  out.offset = Number.isFinite(out.offset) ? Math.max(-.6, Math.min(.6,out.offset)) : d.offset;
+  for (const key of ['start','end']) out.clip[key] = Number.isFinite(out.clip[key]) ? Math.max(0,out.clip[key]) : 0;
   if (!Array.isArray(out.sync)) out.sync = [];
+  out.sync = phrasesOf(out.text).map((phrase,i) => {
+    const s = out.sync[i];
+    if (!Number.isFinite(s?.t)) return null;
+    if (!Array.isArray(s.wt) || s.wt.length !== phrase.words.length || !s.wt.every(Number.isFinite)) return { t: s.t };
+    return { t: s.t, wt: [...s.wt], wd: s.wt.map((_,k) => Number.isFinite(s.wd?.[k]) ? Math.max(0,Math.min(60,s.wd[k])) : .2) };
+  });
   if (!out.over || typeof out.over !== 'object') out.over = {};
+  out.over = Object.fromEntries(Object.entries(out.over).filter(([key,value]) => /^(p\d+|\d+\.\d+)$/.test(key) && value && typeof value === 'object' && !Array.isArray(value)));
   return out;
 }
 
@@ -213,7 +231,7 @@ export function parseClock(s) {
   const t = String(s).trim().replace(',', '.');
   if (!t) return NaN;
   const p = t.split(':').map(Number);
-  if (p.some((x) => Number.isNaN(x))) return NaN;
+  if (p.some((x) => !Number.isFinite(x))) return NaN;
   return p.length === 1 ? p[0] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 3600 + p[1] * 60 + p[2];
 }
 

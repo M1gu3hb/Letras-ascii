@@ -1,14 +1,14 @@
 // Paso 6: descargar el archivo final y verlo como lo verá ella.
 import { h, toast, fmtBytes, download } from './ui.js';
 import { buildHtml, audioPlan, exportReady, fileNameOf } from './export.js';
-import { fmtTime, phrasesOf } from './project.js';
+import { fmtTime } from './project.js';
 
 export class ExportPanel {
   constructor(app) {
     this.app = app;
     this.sum = h('dl', { class: 'sum' });
     this.warn = h('div', { class: 'warn hidden', role: 'alert' });
-    this.prevBtn = h('button', { class: 'btn', type: 'button', onclick: () => this.make('preview') }, '👁 Verlo como lo verá ella');
+    this.prevBtn = h('button', { class: 'btn', type: 'button', onclick: () => this.make('preview') }, 'Vista del destinatario');
     this.dlBtn = h('button', { class: 'btn primary', type: 'button', onclick: () => this.make('download') }, '⬇ Descargar el HTML');
     this.busy = h('div', { class: 'muted small', role: 'status' });
     this.notes = h(
@@ -30,7 +30,6 @@ export class ExportPanel {
   }
   paint() {
     const app = this.app;
-    const p = app.project;
     const r = exportReady(app);
     const plan = audioPlan(app);
     const clip = app.clip();
@@ -38,14 +37,16 @@ export class ExportPanel {
     this.sum.replaceChildren(
       ...row('Canción', app.media ? app.media.name : 'sin subir'),
       ...row('Tramo', app.media ? `${fmtTime(clip.start)} → ${fmtTime(clip.end)} (${Math.round(clip.end - clip.start)} s)` : '—'),
-      ...row('Frases con tiempo', `${r.done} de ${r.phrases}`),
+      ...row('Frases incluidas en el tramo', `${r.done} de ${r.phrases}`),
       ...row('Audio en el archivo', plan ? `${plan.label} · ${fmtBytes(plan.bytes)}` : '—'),
     );
     const msgs = [];
     if (!r.hasSong) msgs.push('Falta subir la canción (paso 1).');
     if (!r.phrases) msgs.push('Falta la letra (paso 2).');
-    else if (!r.done) msgs.push('Falta marcar los tiempos de la letra (paso 3).');
-    else if (r.done < r.phrases) msgs.push(`Faltan ${r.phrases - r.done} frases por marcar; esas no aparecerán.`);
+    else if (!r.marked) msgs.push('Falta marcar los tiempos de la letra (paso 3).');
+    else if (r.marked < r.phrases) msgs.push(`Faltan ${r.phrases - r.marked} frases por marcar; esas no aparecerán.`);
+    if (r.outside) msgs.push(`${r.outside} frases marcadas quedan fuera del tramo y no aparecerán. Amplía el tramo o ajusta sus tiempos.`);
+    if (r.hasSong && r.marked && !r.done) msgs.push('No hay frases visibles en este tramo. Vuelve a Canción para revisarlo.');
     if (plan && plan.bytes > 22 * 1048576) msgs.push('El archivo va a pesar bastante. Si quieres uno más ligero, elige un tramo más corto.');
     this.warn.classList.toggle('hidden', !msgs.length);
     this.warn.replaceChildren(...msgs.map((m) => h('p', {}, m)));

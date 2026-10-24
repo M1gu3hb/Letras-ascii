@@ -29,6 +29,7 @@ export const debounce = (fn, ms) => {
 let toastEl = null;
 let toastId = 0;
 export function toast(msg, kind = '') {
+  if (!msg) { if (toastEl) toastEl.className = 'toast'; clearTimeout(toastId); return; }
   if (!toastEl) {
     toastEl = h('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
     document.body.append(toastEl);

@@ -50,7 +50,7 @@ export class TimeStrip {
       },
       { passive: false },
     );
-    if (window.ResizeObserver) new ResizeObserver(() => this.layout()).observe(this.el);
+    if (window.ResizeObserver) { this.resizeObserver = new ResizeObserver(() => this.layout()); this.resizeObserver.observe(this.el); }
   }
 
   // ───────────── datos ─────────────
@@ -381,6 +381,7 @@ export class TimeStrip {
   hideTip() {
     this.tip.hidden = true;
   }
+  destroy() { this.resizeObserver?.disconnect(); }
 }
 
 // 1:07.35
@@ -388,4 +389,5 @@ function fmtTime2(t) {
   const m = Math.floor(t / 60);
   const s = t - m * 60;
   return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+
 }

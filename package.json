@@ -1,17 +1,25 @@
 {
   "name": "detalle-ascii",
   "version": "1.0.0",
-  "description": "",
+  "description": "Editor local de letras sincronizadas en arte ASCII",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node build.mjs",
+    "lint": "eslint js scripts test/unit test/reliability.mjs test/layout-bounds.mjs",
+    "test:unit": "node --test test/unit/*.test.mjs",
+    "test:browser": "node scripts/test-browser.mjs",
+    "test": "npm run lint && npm run test:unit && npm run build && npm run test:browser"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@eslint/js": "9.39.5",
     "esbuild": "^0.28.2",
+    "eslint": "9.39.5",
+    "globals": "16.5.0",
     "playwright-core": "^1.64.1"
   },
-  "type": "module"
+  "type": "module",
+  "private": true
 }

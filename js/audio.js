@@ -1,6 +1,8 @@
 // Audio en el navegador: leer canción o video, sacar la pista de audio, analizarla (graves, medios,
 // agudos, golpes) y preparar copias para reproducir (tramo) y para exportar. Nada sale del equipo.
 import { analyzePCM, peaksOf, encodeWav, sliceEnergy, FPS } from './analyze.js';
+import { assetUrl } from './assets.js';
+import { abortIfNeeded, validateMedia, probeDuration } from './media-preflight.js';
 
 export const MAX_MINUTES = 20;
 export const PEAKS_PER_SEC = 50;
@@ -31,10 +33,16 @@ export function downmix(buf) {
 }
 
 // file -> { name, video, dur, sr, chans:[Float32Array], mono, peaks, energy }
-export async function loadMedia(file, onStatus = () => {}) {
+export async function loadMedia(file, onStatus = () => {}, { signal } = {}) {
+  abortIfNeeded(signal);
+  validateMedia(file);
   const video = isVideoFile(file);
+  onStatus('Comprobando el archivo…', 0.02);
+  validateMedia(file, await probeDuration(file, signal));
+  abortIfNeeded(signal);
   onStatus(video ? 'Leyendo el video…' : 'Leyendo la canción…', 0.05);
   const ab = await file.arrayBuffer();
+  abortIfNeeded(signal);
   onStatus(video ? 'Sacando el audio del video…' : 'Decodificando…', 0.2);
   await tick();
   let buf;
@@ -47,16 +55,42 @@ export async function loadMedia(file, onStatus = () => {}) {
         : 'No pude leer ese archivo de audio. Prueba con mp3, m4a, wav u ogg.',
     );
   }
+  abortIfNeeded(signal);
+  validateMedia(file, buf.duration);
   if (!buf.length || !buf.duration) throw new Error('El archivo no trae audio.');
   if (buf.duration > MAX_MINUTES * 60) throw new Error(`Dura más de ${MAX_MINUTES} minutos. Recórtalo un poco antes de subirlo.`);
   const chans = [];
   for (let c = 0; c < Math.min(2, buf.numberOfChannels); c++) chans.push(buf.getChannelData(c));
-  const mono = downmix(buf);
+  let mono = downmix(buf);
   onStatus('Dibujando la onda…', 0.4);
   await tick();
-  const peaks = peaksOf(mono, Math.max(100, Math.ceil(buf.duration * PEAKS_PER_SEC)));
+  const count = Math.max(100, Math.ceil(buf.duration * PEAKS_PER_SEC));
   onStatus('Escuchando graves y golpes…', 0.45);
-  const energy = await analyzePCM(mono, buf.sampleRate, (p) => onStatus('Escuchando graves y golpes…', 0.45 + 0.55 * p), tick);
+  let peaks, energy;
+  if (typeof Worker !== 'undefined') {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const worker = new Worker(assetUrl('audio-worker.js'));
+        const finish = (value, error) => { worker.terminate(); signal?.removeEventListener('abort', abort); clearTimeout(timeout); error ? reject(error) : resolve(value); };
+        const abort = () => finish(null, new DOMException('Carga cancelada', 'AbortError'));
+        const timeout = setTimeout(() => finish(null, new Error('El análisis tardó demasiado.')), 120000);
+        signal?.addEventListener('abort', abort, { once: true });
+        worker.onerror = () => finish(null, new Error('Análisis no disponible'));
+        worker.onmessage = ({ data }) => {
+          if (data.error) finish(null, new Error(data.error));
+          else if (data.mono) finish(data);
+          else onStatus('Escuchando graves y golpes…', 0.45 + 0.55 * data.progress);
+        };
+        worker.postMessage({ mono, sr: buf.sampleRate, count }, [mono.buffer]);
+      });
+      ({ mono, peaks, energy } = result);
+    } catch (error) { abortIfNeeded(signal); if (!mono.byteLength) mono = downmix(buf); }
+  }
+  if (!energy) {
+    peaks = peaksOf(mono, count);
+    energy = await analyzePCM(mono, buf.sampleRate, (p) => onStatus('Escuchando graves y golpes…', 0.45 + 0.55 * p), async () => { abortIfNeeded(signal); await tick(); });
+  }
+  abortIfNeeded(signal);
   return { name: file.name, video, dur: buf.duration, sr: buf.sampleRate, chans, mono, peaks, energy };
 }
 

@@ -40,7 +40,7 @@ const MEASURE = ({ inTheater }) => {
   const chk = (w, tag) => {
     if (w.gx == null || w.Wb == null) return;
     // las letras llevan ~1.5 celdas de margen propio: se tolera hasta 2.5
-    if (w.gx < -2.5 || w.gy < 0 || w.gx + w.Wb > r.grid.cols + 2.5 || w.gy + w.Hb > r.grid.rows) out.push(`${tag}:${w.text}`);
+    if (w.gx < -2.5 || w.gy < 0 || w.gx + w.Wb > r.grid.cols + 2.5 || w.gy + w.Hb > r.grid.rows) out.push(`${tag}:${w.text} (${w.gx},${w.gy} ${w.Wb}×${w.Hb})`);
   };
   if (tl) {
     for (const u of tl.units) for (const w of u.words) chk(w, 'hero');

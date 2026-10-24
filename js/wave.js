@@ -53,7 +53,7 @@ export class Wave {
       else return;
       e.preventDefault();
     });
-    if (window.ResizeObserver) new ResizeObserver(() => this.draw()).observe(cv);
+    if (window.ResizeObserver) { this.resizeObserver = new ResizeObserver(() => this.draw()); this.resizeObserver.observe(cv); }
   }
 
   setMedia(media) {
@@ -117,11 +117,11 @@ export class Wave {
     return this.v0 + (x / w) * (this.v1 - this.v0);
   }
 
-  hit(x) {
+  hit(x, radius = HANDLE) {
     const a = this.tx(this.start);
     const b = this.tx(this.end);
-    if (Math.abs(x - a) <= HANDLE) return 'start';
-    if (Math.abs(x - b) <= HANDLE) return 'end';
+    const da = Math.abs(x - a), db = Math.abs(x - b);
+    if (Math.min(da, db) <= radius) return da <= db ? 'start' : 'end';
     if (x > a && x < b) return 'move';
     return 'seek';
   }
@@ -130,7 +130,7 @@ export class Wave {
     if (!this.media) return;
     const r = this.cv.getBoundingClientRect();
     const x = e.clientX - r.left;
-    const kind = this.hit(x);
+    const kind = this.hit(x, e.pointerType === 'touch' ? 24 : HANDLE);
     this.cv.setPointerCapture(e.pointerId);
     this.drag = { kind, x0: x, s0: this.start, e0: this.end, moved: false };
     if (kind === 'seek') {
@@ -274,4 +274,6 @@ export class Wave {
       g.fillRect(Math.round(cx) - 1, 0, 2, Hh - axisH);
     }
   }
+  destroy() { this.resizeObserver?.disconnect(); }
+
 }
