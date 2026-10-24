@@ -49,5 +49,5 @@ try {
  const cancelled=await page.evaluate(async()=>{const a=window.__app;let read=false;const f=new File(['test'],'cancel.wav',{type:'audio/wav'});f.arrayBuffer=async()=>{read=true;return new ArrayBuffer(1)};const promise=a.loadFile(f);a.cancelLoad();return {result:await promise,read};});
  check(cancelled.result===false && !cancelled.read,'cancel prevents reading/decoding a pending file');
  await page.evaluate(()=>window.__app.destroy());await page.waitForTimeout(100);check(await page.evaluate(()=>window.__app.destroyed && window.__app.root.children.length===0),'editor disposes and unmounts without leaving UI behind');
- check(errors.length===0,'no page, console or network errors');console.log(`${checks} reliability checks passed`);
+ check(errors.length===0,'no page, console or network errors: '+errors.join(' | '));console.log(`${checks} reliability checks passed`);
 } finally {await browser.close();srv.close();}
