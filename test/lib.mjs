@@ -24,7 +24,8 @@ export async function launch(opts = {}) {
 export function watch(page, errs) {
   page.on('pageerror', (e) => errs.push('pageerror: ' + String(e)));
   page.on('console', (m) => {
-    if (m.type() === 'error') errs.push('console: ' + m.text());
+    if (m.type() === 'error') errs.push('console: ' + m.text() + ' ' + (m.location().url || ''));
   });
+  page.on('response', (r) => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ': ' + r.url()); });
   page.on('requestfailed', (r) => { if (!r.url().startsWith('blob:')) errs.push('reqfail: ' + r.url().slice(0, 80)); });
 }
