@@ -49,3 +49,7 @@ Las pruebas usan Chromium automatizado con viewport y entrada táctil emulados, 
 La revisión de teclado detectó que Espacio debe seguir siendo el botón de captura durante una pasada, incluso si quedó foco en otro control. Se conserva ese contrato durante `run`; fuera de la captura, los botones recuperan su activación nativa. La regresión de marcado volvió a pasar después de ese ajuste.
 
 Resultados acumulados tras correcciones: lint sin errores; 8 pruebas unitarias; 6 comprobaciones de almacenamiento/migración; 17 comprobaciones de fiabilidad; UX en 11 tamaños; validación de rejilla, formatos y marcado en 7 configuraciones; marcado completo, timeline por palabra, controles ASCII, exportación y teatro sin errores de consola. Se revisaron capturas de los seis paneles y del destinatario. La selección final de capturas se vuelve a generar con el build publicado.
+
+## Verificación adicional en GitHub y Vercel
+
+La revisión publicada en Vercel abrió el editor, Estilo y el modal de proyectos correctamente. El navegador de CI detectó peticiones 404 implícitas al icono del HTML exportado, que no aparecían en el Chromium local. Se añadió un icono autocontenido a la exportación y diagnóstico con URL/respuestas HTTP en el observador de pruebas. Fiabilidad (17) y exportación visual volvieron a pasar localmente. La matriz responsive final de 320 px, teléfono horizontal, tablet y escritorio terminó sin desbordes, objetivos táctiles insuficientes ni saltos al marcar. Se ajustó también el texto del modal para referirse a cualquier dispositivo.

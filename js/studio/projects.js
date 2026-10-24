@@ -166,7 +166,7 @@ export async function openProjects(self) {
         ),
       );
     }
-    dlg.append(h('div', { class: 'mbox' }, h('h2', {}, 'Mis proyectos'), h('p', { class: 'muted' }, 'Se guardan solo en este navegador, en esta computadora.'), list, h('div', { class: 'mfoot' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cerrar'))));
+    dlg.append(h('div', { class: 'mbox' }, h('h2', {}, 'Mis proyectos'), h('p', { class: 'muted' }, 'Se guardan solo en este navegador y en este dispositivo.'), list, h('div', { class: 'mfoot' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cerrar'))));
     dlg.addEventListener('click', (e) => e.target === dlg && close());
     dlg.addEventListener('keydown', (e) => e.key === 'Escape' && close());
     close = modalDialog(dlg, self.root);
