@@ -44,7 +44,7 @@ for (const name of only) {
     a.emit('reset');
   }, LINES);
   await pg.waitForTimeout(900);
-  // en el teléfono horizontal (390 px de alto) todo va compacto a propósito: pestañas y botones de 32–34 px
+  // En horizontal compacto se conserva el mínimo táctil de 44 px.
   const minSide = touch ? 44 : 22;
   for (const t of TABS) {
     await pg.click('#tab-' + t);
