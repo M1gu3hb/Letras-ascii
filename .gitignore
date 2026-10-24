@@ -1,0 +1,24 @@
+# dependencias y resultado del build
+node_modules/
+site/
+dist/
+deploy/d/
+
+# tu música, tus videos y los HTML con canción incrustada nunca se suben
+*.mp3
+*.m4a
+*.wav
+*.ogg
+*.aac
+*.flac
+*.mp4
+*.mov
+*.webm
+assets/energia.json
+/detalle-ascii*.html
+/para-ti.html
+
+# capturas y medios de las pruebas
+test/audit/
+test/media/
+test/*.png

@@ -1,0 +1,21 @@
+import { serve, launch, watch } from './lib.mjs';
+const { srv, port } = serve('site');
+const b = await launch();
+const errs = [];
+const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+const pg = await ctx.newPage();
+watch(pg, errs);
+await pg.goto(`http://localhost:${port}/`);
+await pg.waitForFunction(() => document.documentElement.classList.contains('ready'));
+await pg.setInputFiles('#songfile', 'test/media/kick120.wav');
+await pg.waitForFunction(() => window.__app.media, null, { timeout: 60000 });
+await pg.evaluate(() => { const a = window.__app; a.project.text = Array.from({length:12},(_, i)=>`prueba número ${i+1} con palabras sueltas y luz`).join('\n'); a.projectChanged(); a.emit('reset'); });
+await pg.click('#tab-mark');
+await pg.waitForTimeout(500);
+console.log(JSON.stringify(await pg.evaluate(() => {
+  const pane = document.querySelector('.markpane');
+  const cs = getComputedStyle(pane);
+  const r = (s) => { const e = document.querySelector(s); const b = e.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.height)]; };
+  return { rows: cs.gridTemplateRows, cols: cs.gridTemplateColumns, scrollTop: pane.scrollTop, ch: pane.clientHeight, sh: pane.scrollHeight, seg: r('.seg'), mstage: r('.mstage'), pad: r('.pad'), mbtns: r('.mbtns'), mopts: r('.mopts'), panel: r('.panel') };
+})));
+await b.close(); srv.close();
