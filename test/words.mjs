@@ -194,7 +194,9 @@ for (const [name, cfg] of Object.entries(DEV)) {
   await pg.waitForTimeout(450);
   ok(!(await pg.evaluate(() => window.__app.scene.tl.lines[0].words[3].held)), `${name}: «Corta» la vuelve corta`);
 
-  // 7. «Aquí» con la canción sonando
+  // 7. Audition is explicit: verify the default is silent, then enable automatic audition.
+  await pg.getByText('Escuchar la palabra al elegirla o moverla', { exact: true }).click();
+  // «Aquí» con la canción sonando
   await pg.locator('.wchips.big .wc').nth(1).click();
   await pg.waitForTimeout(400);
   const hereBtn = pg.locator('.here');

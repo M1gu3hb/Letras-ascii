@@ -2740,3 +2740,105 @@ summary {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* Navigation and adaptive controls: all existing tools remain available. */
+.studio { height: var(--app-height, 100dvh); }
+:root { --muted: #b9a8d9; }
+.step-footer { flex: none; padding: 12px 16px; border-top: 1px solid var(--line); display: grid; gap: 8px; background: var(--panel); }
+.step-note { color: var(--muted); font-size: 12px; }
+.step-buttons { display: flex; gap: 8px; }
+.step-buttons .primary { flex: 1; }
+.step-buttons .btn { white-space: normal; }
+.tab.complete i { display: grid; border-color: var(--ok); }
+.saved[data-state='error'] { color: var(--bad); white-space: normal; }
+.recipient-controls { position: fixed; z-index: 4; bottom: max(12px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(640px,calc(100% - 24px)); max-height: 45dvh; overflow: auto; padding: 12px; border: 1px solid var(--line2); border-radius: 14px; background: #0d0716ed; }
+.recipient-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player-caption { margin: 0 0 8px; font-size: 14px; min-height: 1.5em; }
+.recipient-controls input { width: 100%; }
+.player-transcript { margin-top: 8px; }
+.player-transcript summary { cursor: pointer; min-height: 32px; }
+.player-transcript div { max-height: 30dvh; overflow: auto; }
+.player-time { font: 12px var(--mono); margin-left: auto; }
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) and (min-height: 521px) {
+  .grid { grid-template-columns: minmax(0,1fr) clamp(420px,40vw,700px); }
+}
+@media (max-width: 899px), (max-aspect-ratio: 1/1) {
+  .panel { order: 0; padding-bottom: 16px; }
+  .step-footer { order: 1; padding: 8px 12px; gap: 5px; }
+  .tabs { order: 2; }
+  .step-note { font-size: 12px; }
+  .studio[data-tab='song'] { --stage-h: clamp(110px,24dvh,280px); }
+  .studio[data-tab='text'] { --stage-h: clamp(100px,20dvh,240px); }
+  .studio[data-tab='words'] { --stage-h: clamp(100px,22dvh,280px); }
+  .tab { font-size: 11.5px; min-height: 56px; }
+  .tagtxt { max-width: 48%; font-size: 10px; }
+}
+@media (pointer: coarse), (any-pointer: coarse) {
+  .btn, .btn.small, .chip, .navb, .zb, .mini, .nb, .segb, .tbtn { min-width: 44px; min-height: 44px; }
+  .tab { min-height: 56px; }
+  .player-transcript summary { min-height: 44px; }
+  .zoomrow, .row.tight { flex-wrap: wrap; }
+  .step-buttons .btn { min-height: 44px; }
+  .tagseg button { min-height: 36px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 13/10) {
+  .panel { order: 1; }
+  .tabs { order: 0; }
+  .step-footer { order: 2; padding: 6px 10px; }
+  .step-note { display: none; }
+  .step-buttons .btn { padding-top: 6px; padding-bottom: 6px; }
+  .tab { min-height: 44px; }
+  .studio[data-tab='mark'] .mcard.done { gap: 6px; padding: 10px; }
+  .mcard.done .btn.big { min-height: 44px; font-size: 15px; }
+  .recipient-controls { max-height: 48dvh; padding: 8px; }
+}
+@media (max-width: 380px) {
+  .top { gap: 6px; }
+  .top .btn.small { padding: 8px; }
+  .step-note { line-height: 1.3; }
+  .step-buttons .btn { font-size: 13px; }
+}
+
+/* Notices never cover transport or next-step controls. */
+.toast { top: calc(68px + env(safe-area-inset-top)); bottom: auto; pointer-events: none; max-width: calc(100vw - 24px); }
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+ .tab.complete:not(.on) i { display: none; }
+ .tab { padding-inline: 8px; }
+}
+@media (max-width: 480px) and (min-height: 521px) {
+ .trow.main { display: grid; grid-template-columns: 52px 44px minmax(0,1fr) 44px; gap: 6px 8px; }
+ .trow.main .time { grid-column: 3; grid-row: 1; text-align: center; font-size: 11px; }
+ .trow.main .moreBtn { grid-column: 4; grid-row: 1; }
+ .trow.main .scrub { grid-column: 1 / -1; grid-row: 2; width: 100%; min-width: 0; margin: 0; }
+ .studio[data-tab='song'] { --stage-h: clamp(96px,17dvh,150px); }
+ .studio[data-tab='text'] { --stage-h: clamp(90px,15dvh,140px); }
+ .stagefs { min-width: 44px; min-height: 44px; }
+ .studio[data-fmt='tall'] .trow.main { display: flex; }
+}
+@media (pointer: coarse), (any-pointer: coarse) {
+ .wc, .tagseg button { min-width: 44px; min-height: 44px; }
+}
+@container (max-width: 300px) {
+ .stagetag { flex-wrap: wrap; gap: 3px; }
+ .tagtxt { max-width: 100%; }
+}
+@media (pointer: coarse), (any-pointer: coarse) {
+ .mtopbtn, .plwrap > summary, .mhelp > summary, details.grp > summary { min-height: 44px; }
+}
+@media (pointer: coarse), (any-pointer: coarse) {
+ .stagefs { min-width: 44px; min-height: 44px; }
+}
+/* High-specificity compact layouts must retain the same touch target size. */
+@media (pointer: coarse), (any-pointer: coarse) {
+ .studio .top .pname, .studio .top .btn.small,
+ .studio .markpane .mcard .btn, .studio .markpane .mcard .segb { min-height: 44px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 13/10) {
+ .mcard.done { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-content: center; }
+ .mcard.done .mtitle, .mcard.done .mask, .mcard.done .mbtnrow { grid-column: 1 / -1; }
+}
+.tbtn.restart { font-size: 11px; }
+.save-alert { flex: none; color: var(--bad); padding: 8px 12px; border-bottom: 1px solid var(--bad); font-size: 13px; background: var(--panel); }
+@media (pointer: coarse), (any-pointer: coarse) {
+ .studio input[type='range'], .recipient-controls input[type='range'] { height: 44px; }
+}

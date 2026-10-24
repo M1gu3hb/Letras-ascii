@@ -1,9 +1,15 @@
+import { buildNavigation } from './studio/navigation.js';
+import { Lifecycle } from './lifecycle.js';
+import { Autosave } from './storage/autosave.js';
+import { getPreference as lsGet, setPreference as lsSet } from './storage/preferences.js';
+import * as Theater from './studio/theater.js';
+import * as Projects from './studio/projects.js';
 // Estudio: la aplicación completa (escenario, transporte, pestañas, guardado y proyectos).
 import { Scene } from './scene.js';
 import { Player } from './player.js';
-import { newProject, normalize, modelOf, syncedCount, fmtTimeMs, phrasesOf } from './project.js';
+import { newProject, modelOf, syncedCount, fmtTimeMs, phrasesOf } from './project.js';
 import { SAMPLE_TEXT, sampleSync, autoSync, fakeEnergy } from './synth.js';
-import { loadMedia, wavOf, blobUrl } from './audio.js';
+import { wavOf, blobUrl } from './audio.js';
 import * as store from './store.js';
 import { h, debounce, toast } from './ui.js';
 import { SongPanel } from './panel-song.js';
@@ -25,21 +31,10 @@ const FORMATS = { wide: ['16 / 9', 16 / 9, 'Horizontal'], tall: ['9 / 16', 9 / 1
 
 const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const lsGet = (k, d) => {
-  try {
-    return localStorage.getItem(k) ?? d;
-  } catch (e) {
-    return d;
-  }
-};
-const lsSet = (k, v) => {
-  try {
-    localStorage.setItem(k, v);
-  } catch (e) {}
-};
 
 export class App {
   constructor(root, audio, audioFull) {
+    this.scope = new Lifecycle();
     this.root = root;
     this.audio = audio;
     this.audioFull = audioFull;
@@ -64,7 +59,14 @@ export class App {
     this.player = new Player(this.scene, audio, this.canvas, 'studio');
     this.player.onState = () => this.paintTransport();
     this.player.onEnd = () => this.paintTransport();
-    this.saveSoon = debounce(() => this.save(), 700);
+    this.persistence = new Autosave(store.putProject, (state, id) => {
+      if (id !== this.id) return;
+      this.savedEl.textContent = state === 'saved' ? 'Guardado en este navegador' : state === 'pending' ? 'Guardando…' : 'No se pudo guardar; conserva esta pestaña abierta';
+      this.savedEl.dataset.state = state;
+      this.saveAlert.hidden = state !== 'error';
+      if (state === 'saved') lsSet('last', id);
+    });
+    this.saveSoon = () => this.persistence.schedule(this.id, this.project);
     this.rebuildSoon = debounce(() => this.rebuild(), 140);
     this.canvas.addEventListener('pointerdown', (e) => this.scene.poke(e.clientX, e.clientY, 'tap'));
     this.canvas.addEventListener('pointermove', (e) => {
@@ -74,10 +76,10 @@ export class App {
     if (window.ResizeObserver) {
       const ro = new ResizeObserver(() => {
         clearTimeout(rt);
-        rt = setTimeout(() => this.scene.resize(), 160);
+        rt = setTimeout(() => !this.destroyed && this.scene.resize(), 160);
       });
-      ro.observe(this.stage);
-      ro.observe(this.thost); // girar el teléfono o cambiar a pantalla completa vuelve a acomodar las letras
+      this.scope.observe(ro, this.stage);
+      this.scope.observe(ro, this.thost); // girar el teléfono o cambiar a pantalla completa vuelve a acomodar las letras
     }
     // pantalla completa: tocar o mover el ratón muestra los controles; salir de la pantalla completa del navegador cierra la vista
     this.theaterOn = false;
@@ -88,14 +90,21 @@ export class App {
     const onFs = () => {
       if (this.theaterOn && this.fsAsked && !(document.fullscreenElement || document.webkitFullscreenElement)) this.closeTheater();
     };
-    document.addEventListener('fullscreenchange', onFs);
-    document.addEventListener('webkitfullscreenchange', onFs);
-    window.addEventListener('popstate', () => this.theaterOn && this.closeTheater({ fromPop: true }));
-    window.addEventListener('keydown', (e) => this.onKey(e));
-    setInterval(() => this.emit('tick', this.player.t), 90);
+    this.scope.listen(document, 'fullscreenchange', onFs);
+    this.scope.listen(document, 'webkitfullscreenchange', onFs);
+    this.scope.listen(window, 'popstate', () => this.theaterOn && this.closeTheater({ fromPop: true }));
+    this.scope.listen(window, 'keydown', (e) => this.onKey(e));
+    this.ticker = setInterval(() => this.emit('tick', this.player.t), 90);
+    this.scope.listen(document, 'visibilitychange', () => { if (document.hidden) void this.persistence.flush(); });
+    this.scope.listen(window, 'pagehide', () => void this.persistence.flush());
     this.on('tick', () => this.paintTime());
     this.panels = {};
+    this.navigation = buildNavigation(this);
+    this.root.querySelector('.right').append(this.navigation.footer);
     this.selectTab('song');
+    const fitViewport = () => { this.root.style.setProperty('--app-height', `${window.visualViewport?.height || window.innerHeight}px`); };
+    if (window.visualViewport) this.scope.listen(window.visualViewport, 'resize', fitViewport);
+    fitViewport();
     this.rebuild();
     this.refreshAudio();
   }
@@ -103,6 +112,7 @@ export class App {
   // ───────────── eventos ─────────────
   on(ev, fn) {
     (this.listeners[ev] ||= []).push(fn);
+    return () => { this.listeners[ev] = this.listeners[ev].filter((f) => f !== fn); };
   }
   emit(ev, a, b) {
     (this.listeners[ev] || []).forEach((f) => f(a, b));
@@ -114,7 +124,7 @@ export class App {
     root.className = 'studio';
     document.documentElement.classList.add('studio-page');
     root.dataset.tab = 'song';
-    this.canvas = h('canvas', { id: 'c' });
+    this.canvas = h('canvas', { id: 'c', role: 'img', 'aria-label': 'Vista previa artística de la letra' });
     this.tagTxt = h('span', { class: 'tagtxt' }, 'Así se verá tu canción');
     this.tagBtns = {
       demo: h('button', { type: 'button', onclick: () => this.setPreview('demo') }, 'Ejemplo'),
@@ -127,7 +137,7 @@ export class App {
     this.fsBtn = h('button', { class: 'stagefs', type: 'button', 'aria-label': 'Ver en pantalla completa', title: 'Pantalla completa (tecla F)', onclick: () => this.openTheater() }, h('span', { class: 'fsic', 'aria-hidden': 'true' }), h('span', { class: 'fslab', 'aria-hidden': 'true' }, 'Ver en grande'));
     this.stage = h('div', { class: 'stage', id: 'stage' }, this.canvas, this.tag, this.stageCd, this.fsBtn);
     this.playBtn = h('button', { class: 'tbtn play', type: 'button', 'aria-label': 'Reproducir', onclick: () => this.togglePlay() }, '▶');
-    this.restartBtn = h('button', { class: 'tbtn', type: 'button', 'aria-label': 'Volver al inicio del tramo', onclick: () => this.restart() }, '⏮');
+    this.restartBtn = h('button', { class: 'tbtn restart', type: 'button', 'aria-label': 'Volver al inicio del tramo', onclick: () => this.restart() }, 'Inicio');
     this.timeEl = h('span', { class: 'time' }, '0:00.0 / 0:30.0');
     this.scrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'scrub', 'aria-label': 'Posición en el tramo' });
     this.tScrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'tscrub', 'aria-label': 'Posición en el tramo' });
@@ -158,7 +168,8 @@ export class App {
       h('div', { class: 'trow main' }, this.playBtn, this.restartBtn, this.timeEl, this.scrub, this.moreBtn),
       h('div', { class: 'trow extra' }, this.loopBtn, this.rateSel, fmtSel),
     );
-    this.savedEl = h('span', { class: 'saved' }, '');
+    this.savedEl = h('span', { class: 'saved', role: 'status' }, '');
+    this.saveAlert = h('div', { class: 'save-alert', role: 'alert', hidden: true }, 'No se pudo guardar. Conserva esta pestaña abierta y libera espacio antes de cambiar de proyecto.');
     this.nameEl = h('input', { class: 'pname', type: 'text', placeholder: 'Nombre del proyecto', 'aria-label': 'Nombre del proyecto', maxlength: 60 });
     this.nameEl.addEventListener('input', () => {
       this.project.name = this.nameEl.value;
@@ -188,95 +199,16 @@ export class App {
     this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
-    root.replaceChildren(top, this.grid, this.theater, this.status);
+    root.replaceChildren(top, this.saveAlert, this.grid, this.theater, this.status);
     this.applyFormat();
   }
 
   // ───────────── pantalla completa ─────────────
   // El escenario se muda a una capa que cubre toda la pantalla (y, si el navegador deja, se pide la
   // pantalla completa de verdad para esconder sus barras). Vuelve a su lugar al cerrar.
-  openTheater() {
-    if (this.theaterOn) return;
-    this.theaterOn = true;
-    this.fsAsked = false;
-    this.thost.append(this.canvas, this.tag);
-    this.theater.hidden = false;
-    this.root.classList.add('is-theater');
-    this.top.inert = true;
-    this.grid.inert = true;
-    if (this.needRebuild) this.rebuild(); // (cambios que quedaron pendientes mientras el escenario estaba oculto)
-    this.paintPlayIcons();
-    this.paintTime();
-    this.pokeBar();
-    this.syncDemo();
-    const el = this.theater;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) {
-      try {
-        const r = req.call(el);
-        if (r && r.then) r.then(() => (this.fsAsked = true), () => {});
-        else this.fsAsked = true;
-      } catch (e) {}
-    }
-    // el gesto «atrás» del teléfono cierra la vista en lugar de sacarte de la página
-    try {
-      history.pushState({ theater: 1 }, '');
-      this.hist = true;
-    } catch (e) {
-      this.hist = false;
-    }
-    this.scene.resize();
-    requestAnimationFrame(() => this.theaterOn && this.scene.resize());
-    try {
-      el.focus({ preventScroll: true });
-    } catch (e) {}
-    this.emit('theater', true);
-  }
-
-  closeTheater({ fromPop = false } = {}) {
-    if (!this.theaterOn) return;
-    this.theaterOn = false;
-    clearTimeout(this.barT);
-    if (this.hist && !fromPop) {
-      try {
-        history.back();
-      } catch (e) {}
-    }
-    this.hist = false;
-    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-    if (fsEl) {
-      try {
-        const ex = document.exitFullscreen || document.webkitExitFullscreen;
-        const r = ex.call(document);
-        if (r && r.catch) r.catch(() => {});
-      } catch (e) {}
-    }
-    this.fsAsked = false;
-    this.stage.prepend(this.canvas);
-    this.canvas.after(this.tag);
-    this.theater.hidden = true;
-    this.root.classList.remove('is-theater');
-    this.top.inert = false;
-    this.grid.inert = false;
-    this.demoHold = false;
-    this.syncDemo();
-    this.scene.resize();
-    requestAnimationFrame(() => !this.theaterOn && this.scene.resize());
-    try {
-      this.fsBtn.focus({ preventScroll: true });
-    } catch (e) {}
-    this.emit('theater', false);
-  }
-
-  // muestra los controles y los vuelve a esconder si no se toca nada mientras el escenario se mueve
-  pokeBar() {
-    this.theater.classList.add('hud');
-    clearTimeout(this.barT);
-    this.barT = setTimeout(() => {
-      if (this.theaterOn && (this.player.state === 'playing' || this.player.demo)) this.theater.classList.remove('hud');
-    }, 2800);
-  }
-
+  openTheater(...args) { return Theater.openTheater(this, ...args); }
+  closeTheater(...args) { return Theater.closeTheater(this, ...args); }
+  pokeBar(...args) { return Theater.pokeBar(this, ...args); }
   applyFormat() {
     const f = FORMATS[this.format] || FORMATS.wide;
     this.stage.style.setProperty('--ar', f[0]);
@@ -288,6 +220,7 @@ export class App {
   }
 
   selectTab(id) {
+    if (this.tab !== id) toast(null);
     this.tab = id;
     this.root.dataset.tab = id;
     // si en la pestaña anterior el escenario estaba oculto y quedaron cambios sin dibujar, ahora que se ve se ponen al día
@@ -295,6 +228,8 @@ export class App {
     for (const [k, b] of Object.entries(this.tabBtns)) {
       b.classList.toggle('on', k === id);
       b.setAttribute('aria-selected', k === id ? 'true' : 'false');
+      b.tabIndex = k === id ? 0 : -1;
+      b.setAttribute('aria-controls', 'panel-' + k);
     }
     // si la barra de pestañas se desplaza (pantalla angosta), deja a la vista la elegida. Sin scrollIntoView:
     // eso movía también la página y el panel.
@@ -305,6 +240,9 @@ export class App {
       const Cls = TABS.find((t) => t[0] === id)[3];
       this.panels[id] = new Cls(this);
       this.panels[id].el.hidden = true;
+      this.panels[id].el.id = 'panel-' + id;
+      this.panels[id].el.setAttribute('role', 'tabpanel');
+      this.panels[id].el.setAttribute('aria-labelledby', 'tab-' + id);
       this.panelEl.append(this.panels[id].el);
     }
     for (const [k, p] of Object.entries(this.panels)) p.el.hidden = k !== id;
@@ -515,7 +453,7 @@ export class App {
     this.tag.hidden = !show;
     if (!show) return;
     const hasText = phrasesOf(this.project.text).length > 0;
-    this.tagTxt.textContent = k === 'demo' ? 'Así se verá tu canción' : 'Tu letra, con tiempos de ejemplo';
+    this.tagTxt.textContent = k === 'demo' ? 'Ejemplo animado · sin audio' : 'Tu letra · tiempos de ejemplo';
     for (const [id, b] of Object.entries(this.tagBtns)) {
       b.classList.toggle('on', id === k);
       b.setAttribute('aria-pressed', id === k ? 'true' : 'false');
@@ -531,7 +469,7 @@ export class App {
     // con tu canción ya marcada, en «Estilo» el escenario repite el arranque sin sonido (con los graves reales)
     // para que veas cada cambio al mover un control; con ▶ suena de verdad
     // (lo mismo en la pantalla completa: se ve vivo desde que se abre, hasta que le des ▶)
-    const peek = k === 'real' && (this.tab === 'style' || this.theaterOn);
+    const peek = false; // Paused means paused; styling never advances the real song silently.
     const want = (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
     const tl = this.scene.tl;
     let len = tl && tl.lines.length ? Math.min(Math.max(this.player.dur || 30, 6), tl.lastHide + 1.6) : 8;
@@ -576,8 +514,7 @@ export class App {
       this.audioFull.removeAttribute('src');
       return;
     }
-    const ab = wavOf(this.media, 0, this.media.dur, { sr: 22050, mono: true });
-    this.fullUrl = blobUrl(ab);
+    this.fullUrl = URL.createObjectURL(this.file);
     this.audioFull.src = this.fullUrl;
     this.audioFull.load();
   }
@@ -589,157 +526,33 @@ export class App {
       return;
     }
     this.status.classList.remove('hidden');
-    this.status.replaceChildren(h('div', { class: 'lbox' }, h('div', { class: 'ltxt' }, msg), h('div', { class: 'lbar' }, h('i', { style: { width: Math.round((frac || 0) * 100) + '%' } }))));
+    this.status.replaceChildren(h('div', { class: 'lbox' }, h('div', { class: 'ltxt' }, msg), h('div', { class: 'lbar' }, h('i', { style: { width: Math.round((frac || 0) * 100) + '%' } })), this.loadController && frac < .99 ? h('button', { class: 'btn', type: 'button', onclick: () => this.cancelLoad() }, 'Cancelar carga') : null));
   }
 
-  async loadFile(file, { keepProject = false } = {}) {
-    this.player.pause();
-    if (this.audioFull) this.audioFull.pause();
-    try {
-      const media = await loadMedia(file, (m, f) => this.busy(m, f));
-      this.media = media;
-      this.file = file;
-      const p = this.project;
-      p.song = { name: file.name, size: file.size, type: file.type, dur: media.dur, video: media.video };
-      if (!p.name) p.name = file.name.replace(/\.[^.]+$/, '').slice(0, 60);
-      this.nameEl.value = p.name;
-      if (!keepProject || !(p.clip.end > p.clip.start)) p.clip = { start: 0, end: +Math.min(media.dur, 60).toFixed(2) };
-      this.busy('Guardando…', 0.99);
-      this.refreshFull();
-      this.refreshAudio();
-      this.rebuild();
-      this.emit('media', media);
-      this.emit('clip', this.clip());
-      try {
-        await store.putFile(this.id, file, file.name, file.type);
-      } catch (e) {
-        toast('No pude guardar la canción en este navegador. Funciona igual, pero si recargas tendrás que subirla otra vez.', 'bad');
-      }
-      this.save();
-      return true;
-    } catch (e) {
-      toast(e.message || 'No pude abrir ese archivo.', 'bad');
-      return false;
-    } finally {
-      this.busy(null);
-    }
+  cancelLoad() { this.loadController?.abort(); this.loadController = null; this.busy(null); }
+
+  loadFile(...args) { return Projects.loadFile(this, ...args); }
+  save(...args) { return Projects.save(this, ...args); }
+  projectChanged(...args) { return Projects.projectChanged(this, ...args); }
+  restoreLast(...args) { return Projects.restoreLast(this, ...args); }
+  openProject(...args) { return Projects.openProject(this, ...args); }
+  newAndReset(...args) { return Projects.newAndReset(this, ...args); }
+  openProjects(...args) { return Projects.openProjects(this, ...args); }
+
+  async destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.cancelLoad();
+    for (const panel of Object.values(this.panels)) panel.destroy?.();
+    await this.persistence.flush();
+    this.scope.destroy();
+    clearInterval(this.ticker); clearTimeout(this.barT);
+    this.rebuildSoon.cancel(); this.refreshAudioSoon.cancel();
+    this.player.destroy(); this.audioFull.pause(); this.audioFull.removeAttribute('src'); this.audioFull.load();
+    if (this.clipUrl) URL.revokeObjectURL(this.clipUrl);
+    if (this.fullUrl) URL.revokeObjectURL(this.fullUrl);
+    this.listeners = {}; this.closeProjects?.(); this.root.replaceChildren();
+    document.documentElement.classList.remove('studio-page');
   }
 
-  async save() {
-    try {
-      const p = this.project;
-      await store.putProject(this.id, p, p.name || (p.song && p.song.name) || 'Sin nombre');
-      this.savedEl.textContent = 'Guardado en este navegador';
-      localStorage.setItem('last', this.id);
-    } catch (e) {
-      this.savedEl.textContent = 'No se pudo guardar aquí';
-    }
-  }
-
-  projectChanged({ rebuild = true, save = true } = {}) {
-    if (rebuild) this.rebuildSoon();
-    if (save) this.saveSoon();
-    this.emit('project');
-  }
-
-  async restoreLast() {
-    let id = null;
-    try {
-      id = localStorage.getItem('last');
-    } catch (e) {}
-    if (!id) return false;
-    return this.openProject(id);
-  }
-
-  async openProject(id) {
-    try {
-      const rec = await store.getProject(id);
-      if (!rec) return false;
-      this.player.pause();
-      this.id = id;
-      this.project = normalize(rec.project);
-      this.media = null;
-      this.file = null;
-      this.nameEl.value = this.project.name || '';
-      const fr = await store.getFile(id);
-      if (fr && fr.blob) {
-        const file = new File([fr.blob], fr.name || 'cancion', { type: fr.type || fr.blob.type });
-        this.busy('Recuperando tu canción…', 0.02);
-        try {
-          this.media = await loadMedia(file, (m, f) => this.busy('Recuperando tu canción… ' + m.replace(/…$/, ''), f));
-          this.file = file;
-        } catch (e) {
-          toast('Recuperé tu proyecto, pero no pude abrir la canción guardada. Súbela otra vez.', 'bad');
-        } finally {
-          this.busy(null);
-        }
-      }
-      this.refreshFull();
-      this.refreshAudio();
-      this.rebuild();
-      this.emit('media', this.media);
-      this.emit('clip', this.clip());
-      this.emit('project');
-      this.emit('reset');
-      try {
-        localStorage.setItem('last', id);
-      } catch (e) {}
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  async newAndReset() {
-    this.player.pause();
-    this.id = uid();
-    this.project = newProject();
-    this.media = null;
-    this.file = null;
-    this.nameEl.value = '';
-    this.refreshFull();
-    this.refreshAudio();
-    this.rebuild();
-    this.emit('media', null);
-    this.emit('clip', this.clip());
-    this.emit('project');
-    this.emit('reset');
-    this.selectTab('song');
-    this.savedEl.textContent = '';
-  }
-
-  async openProjects() {
-    let rows = [];
-    try {
-      rows = await store.listProjects();
-    } catch (e) {}
-    const dlg = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Mis proyectos' });
-    const close = () => dlg.remove();
-    const list = h('div', { class: 'plist' });
-    if (!rows.length) list.append(h('p', { class: 'muted' }, 'Todavía no hay proyectos guardados en este navegador.'));
-    for (const r of rows) {
-      list.append(
-        h(
-          'div',
-          { class: 'prow' + (r.id === this.id ? ' cur' : '') },
-          h('button', { class: 'pname-btn', type: 'button', onclick: async () => {
-            close();
-            await this.openProject(r.id);
-          } }, h('b', {}, r.name || 'Sin nombre'), h('small', {}, new Date(r.updated).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) + (r.size ? ' · canción guardada' : ''))),
-          h('button', { class: 'btn small ghost', type: 'button', 'aria-label': 'Borrar ' + (r.name || 'proyecto'), onclick: async () => {
-            if (!confirm('¿Borrar este proyecto de este navegador? No se puede deshacer.')) return;
-            await store.delProject(r.id);
-            close();
-            if (r.id === this.id) this.newAndReset();
-            else this.openProjects();
-          } }, 'Borrar'),
-        ),
-      );
-    }
-    dlg.append(h('div', { class: 'mbox' }, h('h2', {}, 'Mis proyectos'), h('p', { class: 'muted' }, 'Se guardan solo en este navegador, en esta computadora.'), list, h('div', { class: 'mfoot' }, h('button', { class: 'btn', type: 'button', onclick: close }, 'Cerrar'))));
-    dlg.addEventListener('click', (e) => e.target === dlg && close());
-    dlg.addEventListener('keydown', (e) => e.key === 'Escape' && close());
-    document.body.append(dlg);
-    dlg.querySelector('button').focus();
-  }
 }

@@ -82,15 +82,15 @@ const state = (pg) =>
   ok(s1.hud, 'los controles se ven al abrir');
   ok(s1.tagParent === 'thost', 'la etiqueta «Ejemplo / Mi letra» viaja con el escenario');
   await pg.screenshot({ path: 'test/audit/theater-phone-open.png' });
-  ok(s1.demo && s1.play !== 'playing', 'al abrir, la imagen ya se mueve sola (en bucle, sin sonido) hasta que le des ▶');
+  ok(!s1.demo && s1.play !== 'playing', 'al abrir, la imagen respeta la pausa hasta reproducir');
   const fr = [];
   for (let i = 0; i < 2; i++) {
     fr.push(await pg.evaluate(() => window.__app.canvas.toDataURL('image/png')));
     await pg.waitForTimeout(700);
   }
-  ok(fr[0] !== fr[1], 'y de verdad cambia de un cuadro a otro');
+  ok(fr[0] === fr[1], 'y conserva el mismo cuadro mientras está pausada');
   await pg.waitForTimeout(2300);
-  ok(!(await state(pg)).hud, 'con la imagen en movimiento, los controles se esconden solos');
+  ok((await state(pg)).hud, 'en pausa los controles permanecen visibles');
   await pg.touchscreen.tap(195, 300);
   await pg.waitForTimeout(250);
   ok((await state(pg)).hud, 'y vuelven con un toque');

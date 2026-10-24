@@ -18,7 +18,7 @@ export function serve(root) {
   return { srv, port: srv.address().port };
 }
 export async function launch(opts = {}) {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', ...(opts.args || [])] });
+  const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || chromium.executablePath(), args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', ...(opts.args || [])] });
   return b;
 }
 export function watch(page, errs) {

@@ -1,7 +1,7 @@
 // Escena: distribución de la letra, bolita karaoke, polvo, corazón y composición de cada cuadro.
-import { clamp, lerp, smooth, hash } from './util.js';
+import { clamp, lerp, smooth } from './util.js';
 import { Renderer, KC, PAL_SELF, PAL_EDGE } from './grid.js';
-import { Typo, PADC, edgeChars } from './type.js';
+import { Typo, edgeChars } from './type.js';
 import { buildTimeline, pseudoLine, TONE_COLORS, COLORS } from './timeline.js';
 import { renderWord, get3D } from './fx.js';
 import { drawHeart, warmHeart } from './heart.js';
@@ -15,6 +15,7 @@ const ctxBand = (rows) => Math.min(15, Math.max(7, Math.round(rows * 0.4)));
 
 export class Scene {
   constructor(canvas) {
+    this.motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     this.r = new Renderer(canvas);
     this.typo = new Typo();
     this.tl = null;
@@ -332,7 +333,6 @@ export class Scene {
     const wps = this.wps;
     if (!wps || !wps.length) return null;
     const first = wps[0];
-    const cols = this.r.grid.cols;
     if (t < first.t - 0.9) return null;
     if (t < first.t) {
       const u = (t - (first.t - 0.9)) / 0.9;
@@ -560,6 +560,7 @@ export class Scene {
     const g = r.grid;
     const cols = g.cols;
     const rows = g.rows;
+    R.reduced = !!this.motionQuery?.matches;
     g.clear();
     R.t = t;
     let pulse;
@@ -567,10 +568,11 @@ export class Scene {
     else pulse = Math.pow(0.5 + 0.5 * Math.sin(t * 6.4), 9) * 0.8;
     if (mode === 'ended') pulse = Math.pow(0.5 + 0.5 * Math.sin(t * 6.4), 9) * 0.8;
     R.pulse = pulse;
-    this.drawBackdrop(t, mode);
+    if (R.reduced) { pulse = 0; R.pulse = 0; this.drawBackdrop(0, mode); }
+    else this.drawBackdrop(t, mode);
 
     const heartSize = (s) => Math.min(rows * s, cols * s * 0.9);
-    const rot = (tt) => tt * 0.55 + Math.sin(tt * 0.8) * 0.28;
+    const rot = (tt) => R.reduced ? 0 : tt * 0.55 + Math.sin(tt * 0.8) * 0.28;
 
     if (mode === 'intro' && this.intro) {
       drawHeart(R, cols / 2, rows * 0.36, heartSize(0.42), rot(t), pulse, 0.9 * smooth(0, 0.8, t));
@@ -608,7 +610,7 @@ export class Scene {
           for (const w of line.words) renderWord(R, line, w, t);
         }
       }
-      if (this.ballOn && (!outroOn || t < tl.lastHide + 0.3)) this.drawBall(t);
+      if (!R.reduced && this.ballOn && (!outroOn || t < tl.lastHide + 0.3)) this.drawBall(t);
       if (mode === 'ended' && this.overlays) {
         const msg = 'toca para volver a verlo';
         const blink = 0.5 + 0.5 * Math.sin(t * 3.2);
@@ -619,7 +621,7 @@ export class Scene {
       const msg = '- pausa -  toca para seguir';
       g.text(msg, Math.floor((cols - msg.length) / 2), rows - 5, KC.PEACH, 0.85);
     }
-    this.drawTouch();
+    if (!R.reduced) this.drawTouch();
     if (this.glow > 0.02) g.bloom(0.05 * this.glow);
     r.flush({ pulse });
   }

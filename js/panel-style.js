@@ -9,7 +9,7 @@ const HEX = { white: '#ffffff', cream: '#ffecde', blush: '#ffc4c4', rose: '#ff70
 const pct = (v) => Math.round(v * 100) + '%';
 
 function group(title, ...kids) {
-  return h('details', { class: 'grp', open: true }, h('summary', {}, title), h('div', { class: 'gbody' }, ...kids));
+  return h('details', { class: 'grp', open: title === 'Qué se ve' || title === 'Aspecto del ASCII' }, h('summary', {}, title), h('div', { class: 'gbody' }, ...kids));
 }
 
 export class StylePanel {
@@ -201,7 +201,7 @@ export class StylePanel {
       'div',
       { class: 'pane' },
       h('h2', {}, 'Laboratorio'),
-      h('p', { class: 'muted small' }, 'Mueve cualquier control: el escenario cambia en vivo. Mientras no marques tu letra se ve un ejemplo que se mueve solo; con «Mi letra» (arriba del escenario) ves la tuya con tiempos de ejemplo. Con tu letra ya marcada, el escenario repite el arranque de tu canción sin sonido. Con ▶ suena de verdad.'),
+      h('p', { class: 'muted small' }, 'Elige un ajuste rápido y afina lo que necesites. La vista conserva el instante pausado. Pulsa reproducir para comprobar el resultado con tu canción.'),
       group('Qué se ve', field('Lo grande en pantalla', ctl.focus), ctl.ball, ctl.floor),
       group(
         'Aspecto del ASCII',
@@ -256,8 +256,8 @@ export class StylePanel {
     c.bright.set(st.bright ?? 1);
     this.paintPreset();
     c.faces.set(st.faces);
-    c.palette.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.v === st.palette));
-    c.mood.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.v === st.mood));
+    c.palette.querySelectorAll('.chip').forEach((b) => { b.classList.toggle('on', b.dataset.v === st.palette); b.setAttribute('aria-pressed', String(b.dataset.v === st.palette)); });
+    c.mood.querySelectorAll('.chip').forEach((b) => { b.classList.toggle('on', b.dataset.v === st.mood); b.setAttribute('aria-pressed', String(b.dataset.v === st.mood)); });
     this.offsetCtl.set(this.app.project.offset);
     this.paintSeed();
   }

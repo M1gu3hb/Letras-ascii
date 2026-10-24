@@ -22,7 +22,6 @@ export const fontStr = (name, px) => {
   return `${f.i}${f.w} ${px}px ${f.f}${TAIL}`;
 };
 const CAP_TARGET = 70; // altura de la "H" (en % del cuerpo) a la que se igualan todas las fuentes
-const STRETCHY = 'aeouAEOU';
 const STRETCH_ORDER = ['o', 'a', 'e', 'u'];
 
 // ───────── grosor ─────────

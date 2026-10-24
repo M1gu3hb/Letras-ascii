@@ -51,6 +51,10 @@ const html = `<!doctype html>
 mkdirSync('site/fonts', { recursive: true });
 for (const f of readdirSync('assets/fonts')) copyFileSync(`assets/fonts/${f}`, `site/fonts/${f}`);
 writeFileSync('site/app.js', js);
+for (const [entry, output] of [['js/player-entry.js', 'player.js'], ['js/audio-worker.js', 'audio-worker.js']]) {
+  const result = await build({ entryPoints: [entry], bundle: true, minify: !process.env.NOMIN, format: 'iife', target: 'es2020', write: false, legalComments: 'none', charset: 'ascii' });
+  writeFileSync('site/' + output, result.outputFiles[0].text);
+}
 writeFileSync('site/app.css', css);
 writeFileSync('site/index.html', html);
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 10);

@@ -377,6 +377,13 @@ function afterFx(R, w, s, rel, t, fxs) {
 
 // ───────────────────────── entrada principal ─────────────────────────
 export function renderWord(R, line, w, t) {
+  if (R.reduced) {
+    if (t < w.onset || t >= line.hideAt) return;
+    const still = resetSpec(S);
+    still.fill = 1;
+    draw2D(R, line, w, still);
+    return;
+  }
   const rel = t - w.onset;
   if (rel < 0) {
     if (!line.pseudo && !line.noGhost) drawGhost(R, line, w, t);

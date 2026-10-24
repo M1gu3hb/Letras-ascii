@@ -6,8 +6,12 @@ const OS = 'proyectos';
 function open() {
   return new Promise((resolve, reject) => {
     if (!('indexedDB' in window)) return reject(new Error('sin IndexedDB'));
-    const rq = indexedDB.open(DB, 1);
-    rq.onupgradeneeded = () => rq.result.createObjectStore(OS, { keyPath: 'id' });
+    const rq = indexedDB.open(DB, 2);
+    rq.onupgradeneeded = () => {
+      const s = rq.result.objectStoreNames.contains(OS) ? rq.transaction.objectStore(OS) : rq.result.createObjectStore(OS, { keyPath: 'id' });
+      if (!s.indexNames.contains('kind')) s.createIndex('kind', 'kind');
+    };
+    rq.onblocked = () => reject(new Error('Cierra otras pestañas de Letras ASCII para actualizar el guardado.'));
     rq.onsuccess = () => resolve(rq.result);
     rq.onerror = () => reject(rq.error || new Error('IndexedDB falló'));
   });
@@ -40,11 +44,5 @@ export const delProject = (id) =>
     s.delete(id);
     return s.delete(id + ':file');
   });
-export const listProjects = () =>
-  wrap('readonly', (s) => s.getAll()).then((rows) => {
-    const files = new Map((rows || []).filter((r) => r.kind === 'file').map((r) => [r.id.slice(0, -5), r.blob ? r.blob.size : 0]));
-    return (rows || [])
-      .filter((r) => r.kind === 'project')
-      .map((r) => ({ id: r.id, name: r.name, updated: r.updated, size: files.get(r.id) || 0 }))
-      .sort((a, b) => b.updated - a.updated);
-  });
+export const listProjects = () => wrap('readonly', (s) => s.index('kind').getAll('project')).then((rows) =>
+  rows.map((r) => ({ id: r.id, name: r.name, updated: r.updated, size: r.project?.song?.size || 0 })).sort((a, b) => b.updated - a.updated));

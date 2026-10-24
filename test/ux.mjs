@@ -11,6 +11,10 @@ const ok = (c, m) => {
 };
 const LINES = Array.from({ length: 18 }, (_, i) => `prueba número ${i + 1} con palabras sueltas y luz`).join('\n');
 const DEVICES = {
+  'phone-320': { viewport: { width: 320, height: 568 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
+  'phone-430': { viewport: { width: 430, height: 932 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
+  'tablet-768': { viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true, touch: true },
+  'desk-1920': { viewport: { width: 1920, height: 1080 } },
   'phone-360': { viewport: { width: 360, height: 640 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
   'phone-390': { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
   'phone-land': { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
@@ -41,7 +45,7 @@ for (const name of only) {
   }, LINES);
   await pg.waitForTimeout(900);
   // en el teléfono horizontal (390 px de alto) todo va compacto a propósito: pestañas y botones de 32–34 px
-  const minSide = touch ? (name === 'phone-land' ? 30 : 36) : 22;
+  const minSide = touch ? 44 : 22;
   for (const t of TABS) {
     await pg.click('#tab-' + t);
     await pg.waitForTimeout(450);

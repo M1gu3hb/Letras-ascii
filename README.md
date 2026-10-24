@@ -1,0 +1,49 @@
+# Letras en ASCII
+
+Editor local de canciones con letra animada en Canvas 2D. Carga audio/video compatible, elige un tramo, escribe o importa la letra, marca frases o palabras, ajusta el diseño y descarga un HTML autónomo. Los proyectos y archivos se guardan en IndexedDB del navegador. No hay backend de medios, enlaces alojados ni exportación de video en esta versión.
+
+## Desarrollo y despliegue
+
+Node 24. `npm ci`, `npm run build`; servir `site/` con cualquier servidor estático. Vercel usa `node build.mjs` desde la raíz y publica `site/`. GitHub es el origen del proyecto; el empaquetado manual anterior fue retirado. Las fuentes están versionadas; el build no necesita descargarlas de un CDN.
+
+## Arquitectura
+
+- `js/studio.js`: composición de la app y API estable utilizada por sus paneles.
+- `js/studio/`: proyectos, teatro/pantalla completa y navegación guiada.
+- `js/mark/`: vista, constantes y máquina de captura, pausa, cuenta y recuperación.
+- `js/words/`: vista, manipulación de tiempos y controles repetibles por palabra.
+- `js/storage/`: preferencias con namespace y autosave por ID e instantánea.
+- `js/store.js`: IndexedDB v2, migración de v1 e índice de metadatos.
+- `js/audio.js`, `media-preflight.js`, `audio-worker.js`, `analyze.js`: validación, decodificación nativa y análisis en worker con alternativa compatible.
+- `js/project.js`, `import.js`, `export.js`: contrato v3, compatibilidad antigua y exportación.
+- `js/scene.js`, `grid.js`, `type.js`, `director.js`, `timeline.js`, `fx.js`, `bg.js`, `heart.js`: motor visual.
+- `js/player-entry.js`, `player-bootstrap.js`, `player.js`: reproductor independiente exportable, con controles DOM y texto accesible.
+- `js/lifecycle.js`, `dialog.js`, `assets.js`: ciclo de vida, foco y resolución de recursos bajo subrutas.
+
+El build produce `app.js`, `player.js`, `audio-worker.js`, `app.css`, `index.html` y fuentes. El exportado solo incluye el reproductor; `player.js` no debe importar el estudio ni almacenamiento. Para montar el editor bajo otra ruta, conservar el conjunto de assets junto a `app.js`. Las URLs se resuelven desde el script cargado, no desde la ruta de navegación. `await app.destroy()` libera reproducción, timers, listeners, observers y URLs; no montar dos instancias en el mismo root.
+
+## Pruebas
+
+```sh
+npm run lint
+npm run test:unit
+npx playwright-core install --with-deps chromium
+npm test
+```
+
+`npm test` ejecuta lint, pruebas unitarias, build y regresiones de navegador. `npm run test:browser -- reliability ux` selecciona suites. `PLAYWRIGHT_EXECUTABLE_PATH` permite utilizar un Chromium ya instalado. `scripts/fixtures.mjs` crea audio sintético original para las pruebas; no hacen falta canciones personales. Las capturas se guardan en `test/audit/` y están excluidas de Git.
+
+Suites activas: smoke, migración de datos, fiabilidad integral, UX adaptativa (11 tamaños), disposición/formato de escena, captura por frase/palabra, timeline por mouse/toque/teclado, aspecto ASCII, exportación y pantalla completa. Los demás scripts antiguos son utilidades de diagnóstico, no parte de la condición de aprobación. GitHub Actions ejecuta la suite con permisos de lectura y sin credenciales de despliegue.
+
+## Contratos y límites
+
+- Modelo `v:3`: texto por líneas, `sync` absoluto respecto a la canción, `style`, `over`, `clip`, `offset` y `seed`. El HTML exportado usa tiempos relativos al tramo.
+- Exportar requiere al menos una frase renderizable dentro del tramo; se avisa si faltan marcas o quedan fuera.
+- Reimportar v3 conserva estilo, overrides, duraciones y frases no marcadas. LRC/SRT/VTT y HTML antiguo siguen admitidos.
+- El guardado captura una instantánea por ID y se vacía antes de cambiar de proyecto. Si falla, se conserva pendiente y se informa del error.
+- Cambiar la canción conserva texto/diseño y pide confirmación antes de reiniciar sus marcas.
+- Los controles avanzados permanecen disponibles en grupos plegables. En una pantalla con poco alto puede ser necesario desplazar el panel; las pestañas, la navegación y el transporte conservan acceso.
+- Límites preventivos de archivo y memoria protegen la decodificación. Los contenedores/códecs admitidos dependen del navegador. Cancelar detiene el análisis y descarta resultados pendientes; una decodificación nativa que ya empezó puede terminar internamente.
+- IndexedDB es local al origen: integrar en GLYPHOS no traslada automáticamente proyectos entre dominios. La integración y nuevas salidas se trabajan por separado.
+
+Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-inicial.md` para la auditoría previa (describe la versión anterior, no el estado corregido).

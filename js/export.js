@@ -2,6 +2,9 @@
 // la energía de la canción y el audio. Se abre sin internet y sin este sitio.
 import { wavOf, pickTier, TIER_LABELS, bytesToB64, energyForClip } from './audio.js';
 import { phrasesOf } from './project.js';
+import { buildTimeline } from './timeline.js';
+import { modelOf } from './project.js';
+import { assetUrl } from './assets.js';
 
 const MB = 1048576;
 export const ORIGINAL_MAX = 12 * MB;
@@ -23,8 +26,9 @@ export function audioPlan(app) {
 export function exportReady(app) {
   const p = app.project;
   const n = phrasesOf(p.text).length;
-  const done = p.sync.filter((s) => s && Number.isFinite(s.t)).length;
-  return { phrases: n, done, hasSong: !!app.media };
+  const marked = phrasesOf(p.text).filter((_, i) => Number.isFinite(p.sync[i]?.t)).length;
+  const done = buildTimeline(modelOf(p, app.clip ? app.clip() : p.clip)).lines.length;
+  return { phrases: n, done, marked, outside: marked - done, hasSong: !!app.media };
 }
 
 const b64Arr = (u8) => bytesToB64(u8);
@@ -53,11 +57,11 @@ function payloadOf(app, title) {
 
 async function assets() {
   const get = async (name) => {
-    const r = await fetch(name, { cache: 'force-cache' });
+    const r = await fetch(assetUrl(name), { cache: 'force-cache' });
     if (!r.ok) throw new Error('No pude leer ' + name + ' del sitio. Recarga la página e intenta de nuevo.');
     return r.text();
   };
-  const [js, css0] = await Promise.all([get('app.js'), get('app.css')]);
+  const [js, css0] = await Promise.all([get('player.js'), get('app.css')]);
   return { js, css: await inlineFonts(css0) };
 }
 
@@ -68,7 +72,7 @@ async function inlineFonts(css) {
   const data = new Map();
   await Promise.all(
     urls.map(async (u) => {
-      const r = await fetch(u, { cache: 'force-cache' });
+      const r = await fetch(assetUrl(u), { cache: 'force-cache' });
       if (!r.ok) throw new Error('No pude leer las tipografías del sitio. Recarga la página e intenta de nuevo.');
       data.set(u, 'data:font/woff2;base64,' + bytesToB64(await r.arrayBuffer()));
     }),
@@ -82,6 +86,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 export async function buildHtml(app, { title } = {}) {
   const plan = audioPlan(app);
   if (!plan) throw new Error('Falta la canción.');
+  if (!exportReady(app).done) throw new Error('No hay frases con tiempo dentro del tramo elegido. Revisa Canción y Marcar.');
   const name = (title || app.project.name || 'para ti').trim() || 'para ti';
   const { js, css } = await assets();
   const payload = payloadOf(app, name);

@@ -19,7 +19,7 @@ export class SongPanel {
       'label',
       { class: 'drop', for: 'songfile' },
       h('b', {}, 'Sube tu canción o un video'),
-      h('span', {}, 'Arrastra el archivo aquí o toca para elegirlo. Si es un video, le saco el audio.'),
+      h('span', {}, 'Arrastra el archivo aquí o toca para elegirlo. También puedo leer el audio de videos compatibles.'),
       h('small', {}, 'mp3, m4a, wav, ogg, mp4, mov, webm · se queda en tu equipo, no se sube a ningún servidor'),
     );
     const dz = this.drop;
@@ -45,7 +45,7 @@ export class SongPanel {
       onSeek: (t) => this.seekFull(t),
     });
     const zbtn = (txt, label, fn) => h('button', { class: 'btn small ghost', type: 'button', 'aria-label': label, onclick: fn }, txt);
-    this.zoomRow = h('div', { class: 'row tight' }, zbtn('－', 'Alejar', () => this.wave.zoom(1.5)), zbtn('＋', 'Acercar', () => this.wave.zoom(0.66)), zbtn('Ver todo', 'Ver toda la canción', () => this.wave.fitAll()), zbtn('Ver mi tramo', 'Acercar al tramo elegido', () => this.wave.fitRange()), h('span', { class: 'muted small grow' }, 'Ctrl + rueda para acercar'));
+    this.zoomRow = h('div', { class: 'row tight' }, zbtn('－', 'Alejar', () => this.wave.zoom(1.5)), zbtn('＋', 'Acercar', () => this.wave.zoom(0.66)), zbtn('Ver todo', 'Ver toda la canción', () => this.wave.fitAll()), zbtn('Ver mi tramo', 'Acercar al tramo elegido', () => this.wave.fitRange()), h('span', { class: 'muted small grow' }, 'Zoom: botones o Ctrl + rueda'));
     this.listenBtn = h('button', { class: 'btn small', type: 'button', onclick: () => this.toggleFull() }, '▶ Escuchar la canción');
     this.startIn = h('input', { type: 'text', class: 'tin', inputmode: 'decimal', 'aria-label': 'Empieza en' });
     this.endIn = h('input', { type: 'text', class: 'tin', inputmode: 'decimal', 'aria-label': 'Termina en' });
@@ -55,8 +55,10 @@ export class SongPanel {
       let s = parseClock(this.startIn.value);
       let e = parseClock(this.endIn.value);
       const c = app.clip();
-      if (Number.isNaN(s)) s = c.start;
-      if (Number.isNaN(e)) e = c.end;
+      if (!Number.isFinite(s) || !Number.isFinite(e) || s < 0 || e > m.dur + .01 || s >= e) {
+        toast('Usa tiempos válidos: inicio menor que final, dentro de la canción. Ejemplo: 1:23.50.', 'bad');
+        this.paintRange(c.start, c.end); return;
+      }
       if (e - s < 3) e = Math.min(m.dur, s + 3);
       app.setClip(s, e);
     };
@@ -70,7 +72,7 @@ export class SongPanel {
         const c = app.clip();
         if (which === 'start') app.setClip(Math.min(t, c.end - 3), Math.max(c.end, t + 3));
         else app.setClip(Math.min(c.start, t - 3), t);
-      } }, 'aquí');
+      } }, which === 'start' ? 'Empieza aquí' : 'Termina aquí');
     this.rangeBox = h(
       'div',
       { class: 'rangebox' },
@@ -204,4 +206,6 @@ export class SongPanel {
   show() {
     this.wave.draw();
   }
+  destroy() { this.wave.destroy(); }
+
 }

@@ -1,6 +1,6 @@
 // Paso 2: la letra (la escribes o pegas tú), textos de inicio y final, e importar letras con tiempos.
 import { h, toast, field } from './ui.js';
-import { phrasesOf, reconcile, fmtTime, parseClock } from './project.js';
+import { phrasesOf, reconcile, parseClock, normalize } from './project.js';
 import { parseTimed, readPayloadFromHtml, readFileText } from './import.js';
 
 export class TextPanel {
@@ -10,12 +10,11 @@ export class TextPanel {
       class: 'lyrics',
       rows: 12,
       spellcheck: 'false',
+      maxlength: 100000,
       placeholder: 'Escribe o pega aquí la letra.\nUna frase por línea.\nLas líneas vacías se ignoran.',
       'aria-label': 'Letra de la canción',
     });
     this.count = h('div', { class: 'muted small' });
-    let prev = '';
-    this.ta.addEventListener('focus', () => (prev = app.project.text));
     this.ta.addEventListener('input', () => {
       const p = app.project;
       const before = p.text;
@@ -47,11 +46,13 @@ export class TextPanel {
       this.ta,
       this.count,
       h('div', { class: 'two' }, field('Al abrir dice', this.intro), field('Al terminar dice', this.outro)),
+      h('details', { class: 'grp text-import' }, h('summary', {}, 'Importar letra o administrar tiempos'), h('div', { class: 'gbody' },
       h('div', { class: 'lab2' }, 'Traer tiempos de otro lado'),
       h('p', { class: 'muted small' }, 'Si ya tienes la letra marcada en otro archivo, la traigo con sus tiempos. El tiempo cuenta desde el inicio del archivo; si ese archivo empezaba en otro punto de la canción completa, dímelo aquí:'),
       h('div', { class: 'row' }, h('label', { class: 'small', for: 'startat' }, 'El archivo empieza en'), this.startAt),
       h('div', { class: 'row wrap' }, timedBtn, oldBtn),
       h('div', { class: 'row' }, clearBtn),
+      )),
     );
     this.ta.value = app.project.text;
     this.paintCount();
@@ -83,6 +84,8 @@ export class TextPanel {
       const rows = parseTimed(f.text, f.name);
       const off = this.startOffset();
       const p = this.app.project;
+      if (p.text && !confirm('¿Reemplazar la letra y sus tiempos? Se quitarán los estilos por palabra de la letra anterior.')) return;
+      p.over = {};
       p.text = rows.map((r) => r.text).join('\n');
       p.sync = rows.map((r) => {
         const t = +(r.t + off).toFixed(2);
@@ -92,6 +95,7 @@ export class TextPanel {
       });
       this.refresh();
       this.app.projectChanged();
+      this.app.emit('reset');
       toast(`Traje ${rows.length} frases con sus tiempos.`);
     } catch (e) {
       if (e && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
@@ -104,17 +108,25 @@ export class TextPanel {
       const d = readPayloadFromHtml(f.text);
       const off = this.startOffset();
       const p = this.app.project;
+      if (p.text && !confirm('¿Reemplazar la letra y sus tiempos con los del archivo?')) return;
+      p.over = {};
+      if (d.project) {
+        const imported = normalize(d.project);
+        p.style = imported.style; p.over = imported.over; p.offset = imported.offset; p.seed = d.seed;
+      }
       p.text = d.lines.map((l) => l[1]).join('\n');
       p.sync = d.lines.map((l) => {
+        if (l[0] == null) return null;
         const t = +(l[0] + off).toFixed(2);
         const words = l[1].trim().split(/\s+/).filter(Boolean);
-        if (l[2] && l[2].length === words.length) return { t, wt: l[2].map((x) => +(x + off).toFixed(2)), wd: l[2].map(() => 0.2) };
+        if (l[2] && l[2].length === words.length) return { t, wt: l[2].map((x) => +(x + off).toFixed(2)), wd: l[3]?.length === words.length ? l[3] : l[2].map(() => 0.2) };
         return { t };
       });
       if (d.intro != null) p.intro = d.intro;
       if (d.outro != null) p.outro = d.outro;
       this.refresh();
       this.app.projectChanged();
+      this.app.emit('reset');
       toast(`Traje ${d.lines.length} frases de tu archivo anterior.`);
     } catch (e) {
       if (e && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
@@ -126,7 +138,6 @@ export class TextPanel {
     if (!p.sync.some(Boolean)) return toast('Todavía no hay marcas.');
     if (!confirm('¿Quitar todas las marcas de tiempo? La letra se queda.')) return;
     p.sync = [];
-    p.over = {};
     this.app.projectChanged();
     this.app.emit('reset');
     toast('Listo, sin marcas.');

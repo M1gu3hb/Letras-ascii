@@ -60,12 +60,12 @@ for (const [name, cfg] of Object.entries(DEV)) {
     const a = window.__app;
     return { kind: a.kind, demo: a.player.demo, from: a.player.demoFrom, dur: a.player.demoDur, first: a.scene.tl.first, state: a.player.state };
   });
-  ok(pk.kind === 'real' && pk.demo && pk.state === 'paused', `${name}: en «Estilo» con la letra marcada la vista previa se repite sola (${JSON.stringify(pk)})`);
+  ok(pk.kind === 'real' && !pk.demo && pk.state === 'paused', `${name}: en «Estilo» con la letra marcada la vista previa respeta la pausa (${JSON.stringify(pk)})`);
   ok(pk.from >= 0 && Math.abs(pk.from - Math.max(0, pk.first - 1)) < 0.01, `${name}: la vuelta empieza justo antes de la primera frase (${pk.from.toFixed(2)} s; primera frase ${pk.first.toFixed(2)} s)`);
   const tA = await pg.evaluate(() => window.__app.scene.R.t);
   await pg.waitForTimeout(500);
   const tB = await pg.evaluate(() => window.__app.scene.R.t);
-  ok(tA !== tB && tB >= pk.from - 0.01, `${name}: el tiempo del escenario avanza solo (${tA.toFixed(2)} → ${tB.toFixed(2)})`);
+  ok(tA === tB, `${name}: el tiempo del escenario permanece pausado (${tA.toFixed(2)} → ${tB.toFixed(2)})`);
 
   // 1. el grupo está y es claro
   const g = await pg.evaluate(() => {
@@ -212,7 +212,7 @@ for (const [name, cfg] of Object.entries(DEV)) {
   await pg.click('#tab-style');
   await pg.waitForTimeout(400);
   dm = await pg.evaluate(() => window.__app.player.demo);
-  ok(dm === true, `${name}: al volver a «Estilo» se repite otra vez`);
+  ok(dm === false, `${name}: al volver a «Estilo» conserva la pausa`);
   await pg.click('.tbtn.play');
   await pg.waitForTimeout(400);
   dm = await pg.evaluate(() => ({ demo: window.__app.player.demo, st: window.__app.player.state }));

@@ -3,6 +3,7 @@
 export class Player {
   constructor(scene, audio, canvas, mode = 'player') {
     this.scene = scene;
+    this.scope = new AbortController();
     this.audio = audio;
     this.canvas = canvas;
     this.mode = mode;
@@ -30,7 +31,7 @@ export class Player {
     this.demoFrom = 0;
     audio.addEventListener('ended', () => {
       if (this.state === 'playing') this.finish();
-    });
+    }, { signal: this.scope.signal });
     if (mode === 'player') {
       const act = (e) => {
         if (e.type === 'keydown') {
@@ -41,11 +42,11 @@ export class Player {
         }
         this.tap();
       };
-      canvas.addEventListener('pointerdown', act);
-      window.addEventListener('keydown', act);
+      canvas.addEventListener('pointerdown', act, { signal: this.scope.signal });
+      window.addEventListener('keydown', act, { signal: this.scope.signal });
     }
     this.loop = this.loop.bind(this);
-    requestAnimationFrame(this.loop);
+    this.raf = requestAnimationFrame(this.loop);
   }
 
   // url: audio del tramo (WAV o el original); sin url = reloj virtual de `dur` segundos
@@ -67,6 +68,7 @@ export class Player {
 
   setState(s) {
     this.state = s;
+    if (s !== 'playing') this.releaseAwake();
     this.scene.paused = s === 'paused' && this.mode === 'player';
     if (s === 'intro') this.t0 = performance.now() / 1000;
     if (s === 'ended') this.endStart = performance.now() / 1000;
@@ -160,10 +162,14 @@ export class Player {
     try {
       if ('wakeLock' in navigator && !this.wake) {
         this.wake = await navigator.wakeLock.request('screen');
+        if (this.state !== 'playing' || this.destroyed) { this.releaseAwake(); return; }
         this.wake.addEventListener('release', () => (this.wake = null));
       }
     } catch (e) {}
   }
+
+  releaseAwake() { const wake = this.wake; this.wake = null; if (wake) Promise.resolve(wake.release()).catch(() => {}); }
+  destroy() { this.destroyed = true; cancelAnimationFrame(this.raf); this.scope.abort(); this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.releaseAwake(); }
 
   // tiempo del tramo, interpolado entre actualizaciones del audio
   time(now) {
@@ -212,6 +218,7 @@ export class Player {
   }
 
   loop() {
+    if (this.destroyed) return;
     const now = performance.now() / 1000;
     const sc = this.scene;
     try {
@@ -219,7 +226,7 @@ export class Player {
       // pero el reloj y el final del tramo siguen al día
       if (this.mode === 'studio' && !this.canvas.offsetParent) {
         this.clock(now);
-        requestAnimationFrame(this.loop);
+        this.raf = requestAnimationFrame(this.loop);
         return;
       }
       if (this.state === 'intro') sc.render(now - this.t0, 'intro');
@@ -229,6 +236,6 @@ export class Player {
     } catch (err) {
       console.error(err);
     }
-    requestAnimationFrame(this.loop);
+    this.raf = requestAnimationFrame(this.loop);
   }
 }
