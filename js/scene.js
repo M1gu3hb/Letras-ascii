@@ -235,19 +235,20 @@ export class Scene {
     const measure = (f) => {
       const em = typo.emCells(f);
       const widths = words.map((w, k) => uw[k] * typo.emCells(f * sizes[k]) + (w.stretch ? w.stretchEm * typo.emCells(f * sizes[k]) : 0));
+      const bounds = words.map((w, k) => typo.wordBounds(txtOf(w), f * sizes[k], w.stretchEm * typo.emCells(f * sizes[k]), w.stretch, faces[k], thick[k], track));
       const space = 0.27 * em;
       const rowsArr = wrap(widths, space, availW);
       const rowH = rowsArr.map((row) => 1.12 * f * Math.max(...row.map((k) => sizes[k])));
       const last = rowsArr[rowsArr.length - 1];
       const blockH = rowH.slice(0, -1).reduce((a, b) => a + b, 0) + 1.14 * f * Math.max(...last.map((k) => sizes[k]));
-      return { em, widths, space, rowsArr, rowH, blockH };
+      return { em, widths, space, rowsArr, rowH, blockH, bounds };
     };
 
     let F = Fmin;
     let plan = null;
     for (let f = Fmax; f >= Fmin; f -= 0.5) {
       const p = measure(f);
-      if (Math.max(...p.widths) <= availW && p.blockH <= availH) {
+      if (Math.max(...p.widths) <= availW && p.blockH <= availH && p.bounds.every((b) => b.width <= cols && b.height <= rows)) {
         F = f;
         plan = p;
         break;
@@ -257,7 +258,7 @@ export class Scene {
       // palabra larguísima: se achica por debajo del mínimo hasta que quepa a lo ancho
       F = Fmin;
       plan = measure(F);
-      while (Math.max(...plan.widths) > availW && F > 1.2) {
+      while ((Math.max(...plan.widths) > availW || plan.bounds.some((b) => b.width > cols || b.height > rows)) && F > 1.2) {
         F -= 0.25;
         plan = measure(F);
       }
@@ -295,8 +296,8 @@ export class Scene {
         const maxExtra = w.stretch ? w.stretchEm * emk : 0;
         const built = typo.buildWord(txtOf(w), Fk, maxExtra, w.stretch, faces[k], thick[k], track);
         Object.assign(w, built);
-        w.gx = Math.round(x + wd / 2 - w.Wb / 2);
-        w.gy = Math.round(yRow + (base - (1 + 0.86 * Fk)) - 1);
+        w.gx = clamp(Math.round(x + wd / 2 - w.Wb / 2), 0, Math.max(0, cols - w.Wb));
+        w.gy = clamp(Math.round(yRow + (base - (1 + 0.86 * Fk)) - 1), 0, Math.max(0, rows - w.Hb));
         // color
         if (w.colKey && COLORS[w.colKey]) w.col = COLORS[w.colKey];
         else {

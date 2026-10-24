@@ -86,6 +86,15 @@ export class Typo {
     return (F * this.ch) / this.cw;
   }
 
+  // Include the raster margin and thick-stroke padding in fitting decisions.
+  wordBounds(text, F, maxExtra, wantStretch, face = 'round', thick = 0, track = 0) {
+    const fm = this.face(face);
+    const radius = thickRadiusEm(fm.n, thickQ(thick)) * F * this.ch * fm.k;
+    const pad = PADC + (radius > 0 ? Math.ceil(radius * fm.sq / this.cw) : 0);
+    const extra = wantStretch && /[oaeu]/i.test(text) ? maxExtra : 0;
+    return { width: Math.ceil(this.unitWidth(text, face, track, thick) * this.emCells(F) + extra + 2 * pad + 4), height: Math.ceil(F * 1.16) + 2 };
+  }
+
   // thick: -1 … +1 (0 = grosor original de la tipografía)
   letterSprite(chr, F, face = 'round', thick = 0) {
     const m = this.face(face);
