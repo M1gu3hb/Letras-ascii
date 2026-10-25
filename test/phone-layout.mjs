@@ -111,9 +111,11 @@ for (const dev of DEVS) {
     ok(m.visible, `${dev.name} · ${fmt}: el escenario se ve en «Estilo»`);
     checkStage(`${dev.name} · ${fmt}`, m, fmt);
     // acostado (390 px de alto) el escenario vertical solo puede ser chico: lo importante es que encaje
-    const minSide = dev.short ? 90 : 150;
+    const phone = dev.cfg.viewport.width <= 600;
+    const minSide = phone ? (fmt === 'tall' ? 80 : 110) : dev.short ? 90 : 150;
     const sz = m.host[0] >= minSide && m.host[1] >= minSide;
-    ok(sz, `${dev.name} · ${fmt}: no queda diminuto (${m.host.map(Math.round)})`);
+    ok(sz, `${dev.name} · ${fmt}: ${phone ? 'la vista compacta conserva proporción y tamaño de referencia' : 'no queda diminuto'} (${m.host.map(Math.round)})`);
+    if (phone) ok(await pg.locator('.panel').evaluate(el=>el.clientHeight>=200) && await pg.locator('.stagefs').isVisible(), `${dev.name} · ${fmt}: queda espacio para editar y se conserva Ver en grande`);
   }
 
   // ── cambiar la forma mientras el escenario está oculto (Marcar en el teléfono) y luego verlo

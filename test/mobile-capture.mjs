@@ -4,7 +4,8 @@ import {chromium,webkit} from 'playwright-core';
 import {serve,watch,openMarkOptions} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 const kind=process.env.PLAYWRIGHT_BROWSER||'chromium',type={chromium,webkit}[kind];
-const browser=await type.launch({executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]});
+const launchOptions={executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]};
+let browser=await type.launch(launchOptions);
 const {srv,port}=serve('site');const errors=[];let count=0;
 const check=(ok,msg)=>{assert.ok(ok,msg);console.log('ok',++count,msg)};
 const folder='test/audit/mobile-repair';mkdirSync(folder,{recursive:true});
@@ -18,6 +19,12 @@ async function open(width,height,strict=false){
  });
  const page=await context.newPage();watch(page,errors);page.on('dialog',d=>d.accept());await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);return{page,context};
+}
+async function close(page,context){
+ await page.evaluate(()=>window.__app.destroy());await context.close();
+ // Release the native media backend between emulated devices. Each case
+ // still runs the same real audio and touch assertions in an isolated browser.
+ if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
 }
 async function fill(page,fmt){
  await page.getByRole('button',{name:'Más controles',exact:true}).tap();await page.getByLabel('Forma de la pantalla',{exact:true}).selectOption(fmt);await page.getByRole('button',{name:'Más controles',exact:true}).tap();
@@ -44,7 +51,7 @@ try{
   await page.locator('.pad').tap();await page.waitForTimeout(360);await page.locator('.pad').tap();
   await page.waitForFunction(()=>window.__app.panels.mark.phase==='done');
   check(await page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3),`${width}×${height} ${fmt}: three actual touches save three phrases`);
-  if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await context.close();
+  if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await close(page,context);
  }
  for(const mode of ['phrase','word']){
   const {page,context}=await open(390,700,true);await fill(page,'tall');
@@ -56,16 +63,16 @@ try{
   check(await page.evaluate(()=>window.__app.player.t>.05),`strict gesture ${mode}: the audio actually advances after the countdown`);
   await page.screenshot({path:`${folder}/after-tall-running-${mode}-${kind}.png`});
   for(let i=0;i<(mode==='phrase'?3:6);i++){await page.locator('.pad').tap();await page.waitForTimeout(360)}
-  check(await page.evaluate(()=>window.__app.panels.mark.phase==='done'&&window.__app.project.sync.filter(Boolean).length===3),`strict gesture ${mode}: marking completes using native touches`);await context.close();
+  check(await page.evaluate(()=>window.__app.panels.mark.phase==='done'&&window.__app.project.sync.filter(Boolean).length===3),`strict gesture ${mode}: marking completes using native touches`);await close(page,context);
  }
  const recovery=await open(390,700,true);await fill(recovery.page,'tall');
  await recovery.page.evaluate(()=>{window.__rejectNextMediaPlay=true});await recovery.page.locator('.mcard.idle .primary').tap();
  await recovery.page.waitForFunction(()=>window.__app.panels.mark.reason==='blocked',null,{timeout:6000});await recovery.page.waitForTimeout(500);
  await recovery.page.locator('.mcard.pause .primary').tap();await recovery.page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused);
- check(true,'a rejected countdown unlock recovers on one direct Resume touch without repeating the countdown');await recovery.context.close();
+ check(true,'a rejected countdown unlock recovers on one direct Resume touch without repeating the countdown');await close(recovery.page,recovery.context);
  const {page,context}=await open(390,700);await page.locator('#tab-style').tap();
  await page.getByRole('button',{name:'Ocultar vista previa',exact:true}).tap();check(!(await page.locator('.stagefs').isVisible()),'preview can be collapsed to work on controls');
  await page.getByRole('button',{name:'Mostrar vista previa',exact:true}).tap();check(await page.locator('.stagefs').isVisible(),'preview can be restored without removing controls');
- await page.getByRole('button',{name:'Más controles',exact:true}).tap();check(await page.getByLabel('Forma de la pantalla').isVisible()&&await page.getByLabel('Velocidad',{exact:true}).isVisible(),'format and playback speed remain available on phone');await context.close();
+ await page.getByRole('button',{name:'Más controles',exact:true}).tap();check(await page.getByLabel('Forma de la pantalla').isVisible()&&await page.getByLabel('Velocidad',{exact:true}).isVisible(),'format and playback speed remain available on phone');await close(page,context);
  assert.deepEqual(errors,[]);console.log(`${count} mobile capture checks passed (${kind})`);
 }finally{await browser.close();srv.close()}

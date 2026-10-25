@@ -33,6 +33,8 @@ async function setup(cfg, { marked = true } = {}) {
     [LINES, marked],
   );
   await pg.waitForTimeout(700);
+  const preview = pg.getByRole('button', { name: 'Mostrar vista previa', exact: true });
+  if (await preview.isVisible()) await preview.tap();
   return { ctx, pg };
 }
 const state = (pg) =>
