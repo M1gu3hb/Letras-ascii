@@ -5,7 +5,7 @@ import {serve,watch,openMarkOptions} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 const kind=process.env.PLAYWRIGHT_BROWSER||'chromium',type={chromium,webkit}[kind];
 const launchOptions={executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]};
-let browser=await type.launch(launchOptions);
+const browser=await type.launch(launchOptions);
 const {srv,port}=serve('site');const errors=[];let count=0;
 const check=(ok,msg)=>{assert.ok(ok,msg);console.log('ok',++count,msg)};
 const folder='test/audit/mobile-repair';mkdirSync(folder,{recursive:true});
@@ -22,9 +22,6 @@ async function open(width,height,strict=false){
 }
 async function close(page,context){
  await page.evaluate(()=>window.__app.destroy());await context.close();
- // Release the native media backend between emulated devices. Each case
- // still runs the same real audio and touch assertions in an isolated browser.
- if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
 }
 async function fill(page,fmt){
  await page.getByRole('button',{name:'Más controles',exact:true}).tap();await page.getByLabel('Forma de la pantalla',{exact:true}).selectOption(fmt);await page.getByRole('button',{name:'Más controles',exact:true}).tap();
@@ -35,11 +32,14 @@ async function fill(page,fmt){
 }
 async function hitArea(page){return page.evaluate(()=>{const a=window.__app,m=a.panels.mark,r=m.pad.getBoundingClientRect(),panel=a.panelEl.getBoundingClientRect();return{hidden:!a.canvas.offsetParent,w:r.width,h:r.height,inside:r.y>=panel.y&&r.bottom<=panel.bottom+1&&r.y>=0&&r.bottom<=innerHeight,hit:[.15,.5,.85].every(x=>[.15,.5,.85].every(y=>document.elementFromPoint(r.x+r.width*x,r.y+r.height*y)?.closest('.pad')===m.pad)),scroll:m.el.scrollHeight-m.el.clientHeight}})}
 try{
+ const matrix=process.env.MOBILE_STRICT_ONLY?null:await open(...sizes[0]);
  for(const [width,height]of (process.env.MOBILE_STRICT_ONLY?[]:sizes))for(const fmt of ['wide','tall','square']){
-  const {page,context}=await open(width,height);await fill(page,fmt);
-  check(await page.locator('.mcard.idle .primary').isVisible(),`${width}×${height} ${fmt}: Start is available`);
-  await openMarkOptions(page);await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap();
-  await page.locator('.mcard.idle .primary').tap();
+  const {page}=matrix;await page.setViewportSize({width,height});await page.locator('#tab-song').tap();await fill(page,fmt);
+  const done=await page.evaluate(()=>window.__app.panels.mark.phase==='done');
+  const start=done?page.getByRole('button',{name:'↻ Marcar otra vez',exact:true}):page.locator('.mcard.idle .primary');
+  check(await start.isVisible(),`${width}×${height} ${fmt}: Start is available`);
+  if(!done){await openMarkOptions(page);await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap()}
+  await start.tap();
   try {await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused)}
   catch(error){console.log('mobile start diagnostic',await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,reason:m.reason,countOn:m.countOn,player:a.player.state,paused:a.audio.paused,ready:a.audio.readyState,playError:a.player.lastPlayError,src:a.audio.currentSrc,error:a.audio.error?.message,tab:a.tab,active:document.activeElement?.outerHTML.slice(0,250),button:m.startBtn.getBoundingClientRect().toJSON(),panel:a.panelEl.getBoundingClientRect().toJSON(),scroll:m.el.scrollTop}}));throw error}
   const area=await hitArea(page);check(area.hidden&&area.inside&&area.hit&&area.h>=140,`${width}×${height} ${fmt}: the capture pad is visible, unobstructed and owns the workspace ${JSON.stringify(area)}`);
@@ -51,8 +51,9 @@ try{
   await page.locator('.pad').tap();await page.waitForTimeout(360);await page.locator('.pad').tap();
   await page.waitForFunction(()=>window.__app.panels.mark.phase==='done');
   check(await page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3),`${width}×${height} ${fmt}: three actual touches save three phrases`);
-  if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await close(page,context);
+  if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await page.waitForFunction(()=>!window.__app.panels.mark.locked());
  }
+ if(matrix)await close(matrix.page,matrix.context);
  for(const mode of ['phrase','word']){
   const {page,context}=await open(390,700,true);await fill(page,'tall');
   await openMarkOptions(page);if(mode==='word')await page.getByRole('button',{name:'Palabra por palabra',exact:true}).tap();
