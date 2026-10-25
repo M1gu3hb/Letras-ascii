@@ -8,10 +8,14 @@ Node 24. `npm ci`, `npm run build`; servir `site/` con cualquier servidor estát
 
 ## Arquitectura
 
+El flujo es Canción → Letra → Marcar → Ajustar → Estilo → Exportar. Ajustar permite audición A–B con contexto, edición numérica y deshacer/rehacer sin que la tira siga al audio mientras editas. Estilo ofrece entradas rápidas, modos independientes ASCII/texto normal para letras y karaoke, y versiones reversibles. Consulta `docs/timeline-y-legibilidad.md` para el contrato, el mapa de módulos, la migración y el plan de validación/publicación.
+
 - `js/studio.js`: composición de la app y API estable utilizada por sus paneles.
 - `js/studio/`: proyectos, teatro/pantalla completa y navegación guiada.
 - `js/mark/`: vista, constantes y máquina de captura, pausa, cuenta y recuperación.
 - `js/words/`: vista, manipulación de tiempos y controles repetibles por palabra.
+- `js/edit-history.js`, `js/words/audition.js`: historial por proyecto y audición temporal independiente del tramo.
+- `js/entry.js`, `js/text-layer.js`, `js/style-controls.js`: entradas legibles, texto normal/karaoke segmentado y controles de lectura/variación.
 - `js/storage/`: preferencias con namespace y autosave por ID e instantánea.
 - `js/store.js`: IndexedDB v2, migración de v1 e índice de metadatos.
 - `js/audio.js`, `media-preflight.js`, `audio-worker.js`, `analyze.js`: validación, decodificación nativa y análisis en worker con alternativa compatible.

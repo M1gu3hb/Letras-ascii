@@ -139,9 +139,9 @@ export class TextPanel {
       p.over = {};
       p.text = rows.map((r) => r.text).join('\n');
       p.sync = rows.map((r) => {
-        const t = +(r.t + off).toFixed(2);
+        const t = +(r.t + off).toFixed(3);
         const words = r.text.trim().split(/\s+/).filter(Boolean);
-        if (r.wt && r.wt.length === words.length) return { t, wt: r.wt.map((x) => +(x + off).toFixed(2)), wd: r.wt.map(() => 0.2) };
+        if (r.wt && r.wt.length === words.length) return { t, wt: r.wt.map((x) => +(x + off).toFixed(3)), wd: r.wt.map(() => 0.2) };
         return { t };
       });
       });
@@ -170,9 +170,9 @@ export class TextPanel {
       p.text = d.lines.map((l) => l[1]).join('\n');
       p.sync = d.lines.map((l) => {
         if (l[0] == null) return null;
-        const t = +(l[0] + off).toFixed(2);
+        const t = +(l[0] + off).toFixed(3);
         const words = l[1].trim().split(/\s+/).filter(Boolean);
-        if (l[2] && l[2].length === words.length) return { t, wt: l[2].map((x) => +(x + off).toFixed(2)), wd: l[3]?.length === words.length ? l[3] : l[2].map(() => 0.2) };
+        if (l[2] && l[2].length === words.length) return { t, wt: l[2].map((x) => +(x + off).toFixed(3)), wd: l[3]?.length === words.length ? l[3] : l[2].map(() => 0.2) };
         return { t };
       });
       if (d.intro != null) p.intro = d.intro;

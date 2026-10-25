@@ -16,6 +16,7 @@ export function holdRepeat(btn, fn, scope) {
     t1 = t2 = 0;
     window.removeEventListener('pointerup', stop);
     window.removeEventListener('pointercancel', stop);
+    window.removeEventListener('blur', stop);
   };
   scope?.cleanups.push(stop);
   btn.addEventListener('pointerdown', (e) => {
@@ -31,6 +32,7 @@ export function holdRepeat(btn, fn, scope) {
     }, 380);
     window.addEventListener('pointerup', stop);
     window.addEventListener('pointercancel', stop);
+    window.addEventListener('blur', stop);
   });
   btn.addEventListener('contextmenu', (e) => e.preventDefault());
   // teclado: una vez por pulsación

@@ -5,6 +5,7 @@ import { clamp, rng } from './util.js';
 import { KC } from './grid.js';
 import { direct, EXIT_BY_MOOD } from './director.js';
 import { PALETTES } from './project-palettes.js';
+import { resolveEntries } from './entry.js';
 
 const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -127,11 +128,13 @@ export function buildTimeline(model) {
     caps: style.caps || 'off',
     fxSet: style.fxSet || null,
     over: model.over || {},
+    randomGroups: style.randomGroups,
   };
   direct(lines, model.seed || 0, duration, opts);
 
   const focus = style.focus === 'line' ? 'line' : 'word';
-  const units = focus === 'word' ? makeUnits(lines, model.over || {}, model.seed || 0) : [];
+  const units = focus === 'word' ? makeUnits(lines, model.over || {}, (style.randomGroups || ['animations']).includes('animations') ? model.seed || 0 : 0) : [];
+  resolveEntries({ lines, units, focus, style }, model.over || {});
   const first = lines.length ? lines[0].t : 0;
   let lastHide = lines.length ? lines[lines.length - 1].hideAt : 0;
   for (const u of units) lastHide = Math.max(lastHide, u.hideAt);
@@ -225,7 +228,7 @@ export function pseudoLine(text, t0, opts = {}) {
       stretch: false,
       stretchEm: 0,
       appear: opts.appear || (k % 2 ? 'rise' : 'decode'),
-      appearDur: opts.appearDur || 0.8,
+      appearDur: opts.appearDur ?? 0.8,
       hold: opts.hold || 'breathe',
       seed: 900 + k * 13,
       exitDelay: 0,

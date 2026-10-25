@@ -205,21 +205,25 @@ function restyle(line, opts, si, seed) {
   const pal = opts.palette && opts.palette.length ? opts.palette : null;
   const rnd = clamp(opts.random ?? 0, 0, 1);
   const rr = rng((seed | 0) * 7331 + si * 4259 + 17);
+  const groups = opts.randomGroups || ['faces','colors','backgrounds','animations'];
   let prevCol = '';
   line.words.forEach((w, k) => {
-    if (rnd > 0 && rr() < rnd * 0.85) {
+    const faceR = rng((groups.includes('faces') ? seed : 0) * 7331 + si * 4259 + k * 73 + 17);
+    const colorR = rng((groups.includes('colors') ? seed : 0) * 6151 + si * 389 + k * 31 + 29);
+    if (rnd > 0 && (k === 0 || rr() < rnd * 0.85)) {
       const plain = w.text.replace(/[^\p{L}]/gu, '');
       const longish = w.held || w.dur >= 0.78;
       const short = w.dur < 0.3 || plain.length <= 2;
-      w.appear = pickWeighted(rr, longish ? LONG_FX : short ? SHORT_FX : RANDOM_FX);
-      w.face = ALL_FACES[Math.floor(rr() * ALL_FACES.length)];
-      w.hold = pickWeighted(rr, HOLDS);
-      if (rnd > 0.45 && !pal) w.colKey = ALL_COLORS[Math.floor(rr() * ALL_COLORS.length)];
-      if (rr() < rnd * 0.6) w.size = clamp(0.8 + rr() * 0.62, 0.7, 1.5);
+      const fx = pickWeighted(rr, longish ? LONG_FX : short ? SHORT_FX : RANDOM_FX);
+      const face = ALL_FACES[Math.floor(rr() * ALL_FACES.length)];
+      const hold = pickWeighted(rr, HOLDS);
+      if (groups.includes('animations')) { w.appear = fx; w.hold = k === 0 ? ['bob','wave','breathe','sway3d'][Math.abs(seed)%4] : hold; }
+      if (groups.includes('faces')) { const allowed = faces || ALL_FACES; w.face = k === 0 ? allowed[Math.abs(seed)%allowed.length] : face; }
+      if (rnd > 0.45 && !pal) { const color = ALL_COLORS[Math.floor(rr() * ALL_COLORS.length)]; if (groups.includes('colors')) w.colKey = color; }
     }
-    if (faces && !faces.includes(w.face)) w.face = faces[Math.floor(rr() * faces.length)];
+    if (faces && !faces.includes(w.face)) w.face = faces[Math.floor(faceR() * faces.length)];
     if (pal) {
-      let c = pal[Math.floor(rr() * pal.length)];
+      let c = pal[Math.floor(colorR() * pal.length)];
       if (c === prevCol && pal.length > 1) c = pal[(pal.indexOf(c) + 1) % pal.length];
       w.colKey = c;
       prevCol = c;
@@ -260,7 +264,7 @@ function applyOver(line, over) {
 // ───────────── API ─────────────
 export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
   const total = lines.length;
-  const sBase = (seed | 0) * 7919 + 101;
+  const sBase = 101; // la semilla solo varía los grupos autorizados en restyle
   const fixedMood = opts.mood && MOODS[opts.mood] ? opts.mood : null;
 
   // pase 0: llaves de frase y conteo de repeticiones (estribillos)
@@ -303,7 +307,7 @@ export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
     let m = null;
     const reps = counts.get(line.key);
     if (reps >= 2 && line.key.length >= 8) {
-      if (!motifMood.has(line.key)) motifMood.set(line.key, CHORUS_MOODS[(chorusN++ + (seed | 0)) % CHORUS_MOODS.length]);
+      if (!motifMood.has(line.key)) motifMood.set(line.key, CHORUS_MOODS[(chorusN++) % CHORUS_MOODS.length]);
       m = motifMood.get(line.key);
     } else {
       const v = {};
@@ -489,6 +493,8 @@ export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
         break;
       }
     }
+    // La rima es automática; la elección manual también prevalece en la última palabra.
+    applyOver(line, opts.over);
     styleDurations(line);
     if (!firstOf.has(line.key)) firstOf.set(line.key, line);
   });
@@ -501,7 +507,12 @@ export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
       w.seed = ((line.src ?? line.i) * 97 + k * 31 + 7) | 0;
     });
   });
-  autoFx(lines, opts, seed);
+  autoFx(lines, opts, (opts.randomGroups || ['animations']).includes('animations') ? seed : 0);
+  if (!fixedMood && (opts.randomGroups || ['backgrounds']).includes('backgrounds')) for (const line of lines) {
+    if (opts.over?.['p' + line.src]?.mood) continue;
+    const random = rng((seed | 0) * 619 + line.src * 177 + 31);
+    if (random() < (opts.random ?? .35)) line.mood = SECTION_MOODS[Math.floor(random() * SECTION_MOODS.length)];
+  }
   return lines;
 }
 

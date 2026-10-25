@@ -51,6 +51,8 @@ export async function bootPlayer(payload) {
   const transcript = h('details', { class: 'player-transcript' }, h('summary', {}, 'Ver la letra'), h('div', {}, ...String(payload.text || '').split('\n').map((line) => h('p', {}, line))));
   const controls = h('div', { class: 'recipient-controls' }, caption, h('div', { class: 'recipient-row' }, play, restart, time), seek, transcript);
   root.append(controls);
+  const fitControls = () => { scene.bottomInset = controls.getBoundingClientRect().height + 24; scene.resize(); };
+  const controlsObserver = new ResizeObserver(fitControls); controlsObserver.observe(controls); fitControls();
   const update = () => {
     play.textContent = player.state === 'playing' ? 'Pausar' : player.state === 'ended' ? 'Volver a reproducir' : 'Reproducir';
     play.setAttribute('aria-label', play.textContent);
@@ -64,7 +66,7 @@ export async function bootPlayer(payload) {
   const timer = setInterval(update, 200); update();
   window.addEventListener('pagehide', (event) => {
     if (event.persisted) { if (player.state === 'playing') player.pause(); return; }
-    clearInterval(timer); clearTimeout(rt); player.destroy(); URL.revokeObjectURL(url);
+    clearInterval(timer); clearTimeout(rt); controlsObserver.disconnect(); player.destroy(); URL.revokeObjectURL(url);
   });
   window.addEventListener('pageshow', (event) => { if (event.persisted) { scene.resize(); update(); } });
   window.__player = player;

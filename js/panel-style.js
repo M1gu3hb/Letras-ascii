@@ -4,6 +4,7 @@ import { defaultStyle, ASCII_KEYS, ASCII_PRESETS, asciiPresetValues, asciiPreset
 import { FILL_CHARS } from './grid.js';
 import { FACES } from './type.js';
 import { WORD_FX } from './director.js';
+import { readingControls, versionControls } from './style-controls.js';
 
 const HEX = { white: '#ffffff', cream: '#ffecde', blush: '#ffc4c4', rose: '#ff7096', pink: '#ff4fd8', ruby: '#e0245e', orange: '#ff8a3d', amber: '#ffb26c', gold: '#ffd75e', mint: '#7dffc4', cyan: '#4fe3ff', ice: '#cfeeff', violet: '#9a7bff', lav: '#c3b4ee' };
 const pct = (v) => Math.round(v * 100) + '%';
@@ -181,12 +182,14 @@ export class StylePanel {
       this.paintSeed();
       app.projectChanged();
     } }, '🎲 Otra versión');
+    this.reading = readingControls(app);
+    this.versions = versionControls(app, () => other.click());
     const clean = h('button', { class: 'btn ghost', type: 'button', onclick: () => {
       if (!Object.keys(app.project.over).length) return toast('No hay cambios hechos a mano.');
       if (!confirm('¿Quitar los cambios que hiciste palabra por palabra?')) return;
       app.project.over = {};
       app.projectChanged();
-      app.emit('reset');
+      app.emit('editrestored');
       toast('Listo: todo vuelve a lo automático.');
     } }, 'Quitar cambios por palabra');
     const reset = h('button', { class: 'btn ghost', type: 'button', onclick: () => {
@@ -202,6 +205,8 @@ export class StylePanel {
       { class: 'pane' },
       h('h2', {}, 'Laboratorio'),
       h('p', { class: 'muted small' }, 'Elige un ajuste rápido y afina lo que necesites. La vista conserva el instante pausado. Pulsa reproducir para comprobar el resultado con tu canción.'),
+      this.versions.element,
+      ...this.reading.elements,
       group('Qué se ve', field('Lo grande en pantalla', ctl.focus), ctl.ball, ctl.floor),
       group(
         'Aspecto del ASCII',
@@ -214,15 +219,15 @@ export class StylePanel {
         field('Carácter de relleno', ctl.fillch),
         ctl.glow,
         ctl.bright,
-        h('p', { class: 'muted small' }, 'Grosor, espacio, tamaño y detalle reacomodan la letra. Para una sola palabra usa «Grosor» en el paso 5.'),
+        h('p', { class: 'muted small' }, 'Grosor, espacio, tamaño y detalle reacomodan la letra. Para una sola palabra usa «Grosor» en Ajustar.'),
         h('div', { class: 'row wrap' }, resetAscii),
       ),
       group('Ritmo y graves', ctl.react, this.meter, this.stats),
-      group('Efectos por palabra', ctl.fxAuto, field('Cuáles puede usar', ctl.fxSet), field('Mayúsculas', ctl.caps), ctl.holdMin, h('p', { class: 'muted small' }, 'Automático: las palabras sostenidas, las que se repiten mucho y las que llevan ¡! reciben efectos. Palabra por palabra lo cambias en el paso 5.')),
+      group('Efectos por palabra', ctl.fxAuto, field('Cuáles puede usar', ctl.fxSet), field('Mayúsculas', ctl.caps), ctl.holdMin, h('p', { class: 'muted small' }, 'Automático: las palabras sostenidas, las que se repiten mucho y las que llevan ¡! reciben efectos. Puedes cambiarlos por palabra en Ajustar.')),
       group('Colores y letras', field('Colores', ctl.palette), field('Tipografías que puede usar', ctl.faces), field('Relleno de las letras', ctl.fill), ctl.random),
       group('Fondo', field('Ambiente', ctl.mood)),
       group('Sincronía', this.offsetCtl),
-      h('div', { class: 'row wrap' }, other, this.seedLab, clean, reset),
+      h('div', { class: 'row wrap' }, this.seedLab, clean, reset),
     );
     this.paintSeed();
     app.on('tick', () => this.tick());
@@ -230,10 +235,12 @@ export class StylePanel {
     app.on('clip', () => this.paintStats());
     app.on('media', () => this.paintStats());
     app.on('reset', () => this.syncFromProject());
+    app.on('editrestored', () => this.syncFromProject());
     this.paintStats();
   }
 
   syncFromProject() {
+    this.reading.sync(); this.versions.sync();
     const st = this.app.project.style;
     const c = this.ctl;
     c.focus.set(st.focus);

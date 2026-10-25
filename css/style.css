@@ -1865,7 +1865,30 @@ canvas.wave {
 }
 
 /* paso 5: tira de tiempo y ajustes finos */
+.adjust-tools, .version-controls { display: grid; gap: 10px; min-width: 0; margin-bottom: 16px; }
+.version-controls { padding: 14px; border: 1px solid var(--line2); border-radius: 14px; background: #21112a; }
+.precision-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+.precision-fields input, .context-field input, .insp input[type=number], .gbody input[type=number] { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border-radius: 8px; border: 1px solid var(--line2); background: #10091a; color: var(--ink); font: 600 16px var(--ui); }
+.context-field { display: grid; flex: 1 1 100px; min-width: 0; font-size: 12px; gap: 6px; }
+.audition-transport { display: grid; grid-template-columns: minmax(90px,1fr) auto 44px 66px; gap: 6px; }
+.audition-transport .btn, .audition-transport select { min-height: 44px; min-width: 0; padding: 6px; font-size: 12px; }
+.audition-settings > summary, .adjust-inspector > summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-weight: 800; }
+.adjust-inspector { min-width: 0; }
+.adjust-inspector .insp { margin: 0; }
+.audition-range { position: absolute; inset-block: 20px 0; pointer-events: none; background: #55d7d51c; border-inline: 2px solid #8be6dc; }
+.sb:focus-visible { outline: 3px solid var(--cyan); outline-offset: -3px; }
+@media (min-width: 1100px) and (min-height: 600px) {
+  .studio[data-tab=words] .grid { grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr); }
+  .wordspane:not([hidden]) { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(200px,.9fr); gap: 12px; }
+  .wordspane > :not(.tbox):not(.adjust-inspector) { grid-column: 1 / -1; }
+  .wordspane .tbox, .wordspane .adjust-inspector { align-self: start; }
+}
 .wordspane .wtop {
+  position: sticky;
+  top: -1px;
+  z-index: 5;
+  background: #10091a;
+  padding-bottom: 8px;
   display: grid;
   gap: 10px;
   margin-bottom: 14px;

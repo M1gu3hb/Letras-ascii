@@ -9,7 +9,7 @@ export class ExportPanel {
     this.sum = h('dl', { class: 'sum' });
     this.warn = h('div', { class: 'warn hidden', role: 'alert' });
     this.prevBtn = h('button', { class: 'btn', type: 'button', onclick: () => this.make('preview') }, 'Vista del destinatario');
-    this.dlBtn = h('button', { class: 'btn primary', type: 'button', onclick: () => this.make('download') }, '⬇ Descargar el HTML');
+    this.dlBtn = h('button', { class: 'btn primary', type: 'button', 'aria-label': 'Descargar el HTML', onclick: () => this.make('download') }, '⬇ Descargar el HTML');
     this.busy = h('div', { class: 'muted small', role: 'status' });
     this.notes = h(
       'div',

@@ -1,6 +1,7 @@
 import { buildNavigation } from './studio/navigation.js';
 import { Lifecycle } from './lifecycle.js';
 import { Autosave } from './storage/autosave.js';
+import { EditHistory } from './edit-history.js';
 import { getPreference as lsGet, setPreference as lsSet } from './storage/preferences.js';
 import * as Theater from './studio/theater.js';
 import * as Projects from './studio/projects.js';
@@ -23,8 +24,8 @@ const TABS = [
   ['song', '1', 'Canción', SongPanel],
   ['text', '2', 'Letra', TextPanel],
   ['mark', '3', 'Marcar', MarkPanel],
-  ['style', '4', 'Estilo', StylePanel],
-  ['words', '5', 'Palabras', WordsPanel],
+  ['words', '4', 'Ajustar', WordsPanel],
+  ['style', '5', 'Estilo', StylePanel],
   ['export', '6', 'Exportar', ExportPanel],
 ];
 const FORMATS = { wide: ['16 / 9', 16 / 9, 'Horizontal'], tall: ['9 / 16', 9 / 16, 'Vertical'], square: ['1 / 1', 1, 'Cuadrada'] };
@@ -100,6 +101,7 @@ export class App {
     this.scope.listen(window, 'pagehide', () => void this.persistence.flush());
     this.on('tick', () => this.paintTime());
     this.panels = {};
+    this.history = new EditHistory(this);
     this.navigation = buildNavigation(this);
     this.root.querySelector('.right').append(this.navigation.footer);
     this.selectTab('song');
@@ -144,6 +146,7 @@ export class App {
     this.tScrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'tscrub', 'aria-label': 'Posición en el tramo' });
     for (const el of [this.scrub, this.tScrub]) {
       el.addEventListener('input', () => {
+        if (this.player.auditionRange) this.panels.words?.audition.stop();
         this.scrubbing = true;
         this.demoHold = true; // quien mueve la barra quiere ver ese instante quieto
         this.syncDemo();
@@ -345,7 +348,8 @@ export class App {
         this.demoHold = true;
         this.syncDemo();
       }
-    } else if (p.t >= p.dur - 0.05) p.start(0);
+    } else if (p.auditionRange) p.resume();
+    else if (p.t >= p.dur - 0.05) p.start(0);
     else p.resume();
   }
   setLoop(v) {

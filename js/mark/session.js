@@ -509,5 +509,5 @@ export function onTheater(self, open) {
 }
 
 export function goNext(self) {
-    self.app.selectTab('style');
+    self.app.selectTab('words');
 }

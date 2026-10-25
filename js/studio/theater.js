@@ -5,6 +5,7 @@ export function openTheater(self) {
     self.fsAsked = false;
     self.thost.append(self.canvas, self.tag);
     self.theater.hidden = false;
+    self.scene.bottomInset = self.tBar.getBoundingClientRect().height + 24;
     self.root.classList.add('is-theater');
     self.top.inert = true;
     self.grid.inert = true;
@@ -59,6 +60,7 @@ export function closeTheater(self, { fromPop = false } = {}) {
     self.stage.prepend(self.canvas);
     self.canvas.after(self.tag);
     self.theater.hidden = true;
+    self.scene.bottomInset = 0;
     self.root.classList.remove('is-theater');
     self.top.inert = false;
     self.grid.inert = false;

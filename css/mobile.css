@@ -1,4 +1,18 @@
 /* Phone workspace. Artwork proportions never determine the capture workspace. */
+.wordspane .strip { --sh: 148px; }
+.wordspane .zoomrow { flex-wrap: nowrap; overflow-x: auto; padding: 3px; }
+.wordspane .zoomrow .btn { flex-shrink: 0; min-height: 44px; }
+@media (max-width: 899px), (max-height: 520px) {
+  .wordspane .wtop { position: sticky; top: -1px; z-index: 5; background: #10091a; padding-bottom: 8px; border-bottom: 1px solid var(--line2); }
+  .wordspane .wtop .strip { --sh: clamp(85px,18dvh,148px); }
+  .wordspane.condensed .wtop .pht { display: none; }
+  .wordspane.condensed .wtop .strip { --sh: 80px; }
+  .wordspane .wtop .phnav { min-height: 38px; }
+  .wordspane .wtop .zoomrow { margin: 0; }
+  .wordspane .wtop .zoomrow .btn { min-height: 44px; padding: 6px 10px; }
+  .wordspane .trow2 { grid-template-columns: minmax(0,1fr); }
+  .wordspane .tbs .btn { min-height: 44px; }
+}
 .preview-toggle, .mopts-toggle { display: none; }
 
 @media (max-width: 899px), (max-aspect-ratio: 1/1), (max-height: 520px) {

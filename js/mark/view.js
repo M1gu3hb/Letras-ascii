@@ -106,8 +106,8 @@ export function buildView(panel) {
     panel.doneTitle = h('h3', { class: 'mtitle' }, h('span', { class: 'mcheck', 'aria-hidden': 'true' }, '✓'), h('span', { class: 'mtxt' }));
     panel.doneAsk = h('p', { class: 'mask' }, '¿Quedó bien?');
     panel.previewBtn = act('btn primary big', '▶ Ver vista previa', () => panel.previewMarked());
-    panel.nextBtn = act('btn alt big', 'Siguiente: Estilo →', () => panel.goNext());
-    panel.correctBtn = act('btn ghost', 'Corregir tiempos por palabra', () => app.selectTab('words'));
+    panel.nextBtn = act('btn alt big', 'Siguiente: Ajustar →', () => panel.goNext());
+    panel.correctBtn = act('btn ghost', 'Omitir ajuste: ir a Estilo', () => app.selectTab('style'));
     panel.againBtn = act('btn ghost', '↻ Marcar otra vez', () => panel.startFresh());
     panel.undoDoneBtn = act('btn ghost', '↶ Deshacer la última', () => panel.undo());
     panel.doneBtns = h('div', { class: 'mbtnrow two' }, panel.againBtn, panel.undoDoneBtn);
@@ -123,7 +123,7 @@ export function buildView(panel) {
 
     // ───── ayuda y lista de frases ─────
     panel.helpTxt = h('p', {});
-    panel.helpTip = h('p', { class: 'tip' }, 'Con audífonos Bluetooth el sonido llega con un pequeño retraso: para marcar usa la bocina o unos audífonos con cable. Si al verlo todo queda un poco antes o después, mueve «Sincronía» en el paso 4.');
+    panel.helpTip = h('p', { class: 'tip' }, 'Con audífonos Bluetooth el sonido llega con un pequeño retraso: para marcar usa la bocina o unos audífonos con cable. Si al verlo todo queda un poco antes o después, mueve «Sincronía» en Estilo.');
     panel.help = h('details', { class: 'mhelp' }, h('summary', {}, '¿Cómo se marca?'), panel.helpTxt, panel.helpTip);
     // la primera vez se muestra abierta, pero solo si sobra pantalla (en teléfonos chicos se queda cerrada)
     const roomy = window.matchMedia && window.matchMedia('(min-height: 860px)').matches;

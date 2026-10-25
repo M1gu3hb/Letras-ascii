@@ -123,6 +123,7 @@ for (const [name, cfg] of Object.entries(DEV)) {
   ok(tgt.height >= (touch ? 40 : 32), `${name}: botón de palabra de ${Math.round(tgt.height)} px de alto`);
 
   // 4. arrastrar el bloque elegido
+  await pg.locator('.strip').scrollIntoViewIfNeeded();
   await pg.evaluate(() => window.__app.player.pause());
   await pg.waitForTimeout(200);
   let sb = await pg.locator('.strip .sb.sel').boundingBox();
@@ -165,6 +166,7 @@ for (const [name, cfg] of Object.entries(DEV)) {
   await pg.waitForTimeout(300);
   await pg.evaluate(() => window.__app.player.pause());
   await pg.waitForTimeout(150);
+  await pg.locator('.strip').scrollIntoViewIfNeeded();
   sb = await pg.locator('.strip .sb.sel').boundingBox();
   const hx = sb.x + sb.width - 3;
   const hy = sb.y + sb.height / 2;
@@ -202,6 +204,7 @@ for (const [name, cfg] of Object.entries(DEV)) {
   await pg.locator('.wchips.big .wc').nth(1).click();
   await pg.waitForTimeout(400);
   const hereBtn = pg.locator('.here');
+  await hereBtn.evaluate(el=>el.scrollIntoView({block:'end'}));
   const hb = await hereBtn.boundingBox();
   ok(hb.height >= 56, `${name}: botón «Aquí» de ${Math.round(hb.height)} px de alto`);
   await pg.waitForTimeout(600);
@@ -214,6 +217,7 @@ for (const [name, cfg] of Object.entries(DEV)) {
   const cdp2 = touch ? await ctx.newCDPSession(pg) : null;
   const hx0 = hb.x + hb.width / 2;
   const hy0 = hb.y + hb.height / 2;
+  ok(await pg.evaluate(({x,y})=>!!document.elementFromPoint(x,y)?.closest('.here'),{x:hx0,y:hy0}),`${name}: Aquí recibe el gesto en su centro sin superposiciones`);
   const tPress = await pg.evaluate(() => performance.now());
   if (touch) {
     await cdp2.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: hx0, y: hy0, id: 1 }] });

@@ -6,6 +6,7 @@ import { buildTimeline, pseudoLine, TONE_COLORS, COLORS } from './timeline.js';
 import { renderWord, get3D } from './fx.js';
 import { drawHeart, warmHeart } from './heart.js';
 import { drawMood, tintOf, drawFloor } from './bg.js';
+import { TextLayer } from './text-layer.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -18,6 +19,7 @@ export class Scene {
     this.motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     this.r = new Renderer(canvas);
     this.typo = new Typo();
+    this.textLayer = new TextLayer(this);
     this.tl = null;
     this.intro = null;
     this.outro = null;
@@ -124,9 +126,10 @@ export class Scene {
     if (!this.tl) return;
     const tl = this.tl;
     const rows = r.rows;
+    const karaokeTop = tl.style.karaokeOn === false ? rows - 4 : Math.max(7, (this.textLayer.geometry().top - r.offY) / r.cellH - 1);
     if (tl.focus === 'word') {
       // la palabra que suena ocupa el centro; la frase completa va chiquita abajo
-      const heroBottom = rows - Math.max(ctxBand(rows), Math.round(rows * 0.21));
+      const heroBottom = Math.min(karaokeTop, rows - Math.max(ctxBand(rows), Math.round(rows * 0.21)));
       const SHIFT = [0, -1.5, 1, 0, -2, 1.5];
       tl.units.forEach((u, n) => {
         const ms = Math.max(...u.words.map((w) => w.size || 1));
@@ -137,7 +140,7 @@ export class Scene {
       for (const line of tl.lines) line.ctx = this.buildCtx(line);
     } else {
       for (const line of tl.lines) {
-        this.layoutLine(line, { top: 7, bottom: 4, Fmax: Math.min(rows * 0.36, 17) * this.sizeG });
+        this.layoutLine(line, { y0: 3, y1: karaokeTop, Fmax: Math.min(rows * 0.36, 17) * this.sizeG });
         for (const w of line.words) if (w.appear === 'flip3d' || w.hold === 'sway3d' || line.exit === 'sink3d') get3D(this.R, w);
       }
     }
@@ -149,6 +152,7 @@ export class Scene {
       this.layoutLine(this.outro, { y0: Math.floor(r.rows * 0.64), y1: Math.floor(r.rows * 0.88), Fmax: 12 });
     }
     this.buildBall();
+    this.textLayer.layout();
   }
 
   // frase completa en chiquito (debajo de la palabra principal); ahí brinca la bolita
@@ -167,6 +171,7 @@ export class Scene {
   }
 
   drawCtx(line, t) {
+    if (this.textLayer) return; // ambos modos inferiores usan el layout segmentado compartido
     const c = line.ctx;
     if (!c) return;
     const a = smooth(line.t - 0.55, line.t - 0.15, t) * (1 - smooth(line.hideAt - 0.4, line.hideAt, t));
@@ -603,15 +608,15 @@ export class Scene {
         for (const line of tl.lines) if (t >= line.t - 0.6 && t <= line.hideAt + 0.1) this.drawCtx(line, t);
         for (const u of tl.units) {
           if (t < u.t - 0.5 || t > u.hideAt + 0.05) continue;
-          for (const w of u.words) renderWord(R, u, w, t);
+          for (const w of u.words) if (w.renderMode !== 'normal') renderWord(R, u, w, t);
         }
       } else {
         for (const line of tl.lines) {
           if (t < line.t - 0.5 || t > line.hideAt + 0.05) continue;
-          for (const w of line.words) renderWord(R, line, w, t);
+          for (const w of line.words) if (w.renderMode !== 'normal') renderWord(R, line, w, t);
         }
       }
-      if (!R.reduced && this.ballOn && (!outroOn || t < tl.lastHide + 0.3)) this.drawBall(t);
+      if (!this.textLayer && !R.reduced && this.ballOn && (!outroOn || t < tl.lastHide + 0.3)) this.drawBall(t);
       if (mode === 'ended' && this.overlays) {
         const msg = 'toca para volver a verlo';
         const blink = 0.5 + 0.5 * Math.sin(t * 3.2);
@@ -625,6 +630,7 @@ export class Scene {
     if (!R.reduced) this.drawTouch();
     if (this.glow > 0.02) g.bloom(0.05 * this.glow);
     r.flush({ pulse });
+    this.textLayer.draw(t, mode);
   }
 
   resize() {
