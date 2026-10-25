@@ -2449,8 +2449,8 @@ kbd {
     grid-template-rows: minmax(0, 1fr);
   }
   /* escribiendo la letra: que el teclado no se coma toda la pantalla */
-  .studio:has(.panel textarea:focus) .left,
-  .studio:has(.panel textarea:focus) .tabs {
+  .studio:has(.panel textarea:focus) .left, .studio.editing-text .left,
+  .studio:has(.panel textarea:focus) .tabs, .studio.editing-text .tabs {
     display: none;
   }
   /* los avisos flotan por encima de la barra de pestañas, no encima de ella */
@@ -2592,10 +2592,10 @@ kbd {
   .studio[data-tab='mark'] .right {
     border-left: 0;
   }
-  .studio:has(.panel textarea:focus) .left {
+  .studio:has(.panel textarea:focus) .left, .studio.editing-text .left {
     display: flex;
   }
-  .studio:has(.panel textarea:focus) .tabs {
+  .studio:has(.panel textarea:focus) .tabs, .studio.editing-text .tabs {
     display: flex;
   }
   .trow.main {
@@ -2838,6 +2838,8 @@ summary {
  .mcard.done .mtitle, .mcard.done .mask, .mcard.done .mbtnrow { grid-column: 1 / -1; }
 }
 .tbtn.restart { font-size: 10px; padding: 0; }
+.wave-zoom-hint { flex-basis: 180px; }
+@media (pointer: coarse), (any-pointer: coarse) { .wave-zoom-hint { flex-basis: 100%; } }
 .save-alert { flex: none; color: var(--bad); padding: 8px 12px; border-bottom: 1px solid var(--bad); font-size: 13px; background: var(--panel); }
 @media (pointer: coarse), (any-pointer: coarse) {
  .studio input[type='range'], .recipient-controls input[type='range'] { height: 44px; }

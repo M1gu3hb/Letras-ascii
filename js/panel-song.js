@@ -45,7 +45,7 @@ export class SongPanel {
       onSeek: (t) => this.seekFull(t),
     });
     const zbtn = (txt, label, fn) => h('button', { class: 'btn small ghost', type: 'button', 'aria-label': label, onclick: fn }, txt);
-    this.zoomRow = h('div', { class: 'row tight' }, zbtn('－', 'Alejar', () => this.wave.zoom(1.5)), zbtn('＋', 'Acercar', () => this.wave.zoom(0.66)), zbtn('Ver todo', 'Ver toda la canción', () => this.wave.fitAll()), zbtn('Ver mi tramo', 'Acercar al tramo elegido', () => this.wave.fitRange()), h('span', { class: 'muted small grow' }, 'Zoom: botones o Ctrl + rueda'));
+    this.zoomRow = h('div', { class: 'row tight' }, zbtn('−', 'Alejar', () => this.wave.zoom(1.5)), zbtn('+', 'Acercar', () => this.wave.zoom(0.66)), zbtn('Ver todo', 'Ver toda la canción', () => this.wave.fitAll()), zbtn('Ver mi tramo', 'Acercar al tramo elegido', () => this.wave.fitRange()), h('span', { class: 'muted small grow wave-zoom-hint' }, matchMedia('(pointer: coarse)').matches ? 'Usa los botones para acercar o alejar la onda.' : 'Zoom: botones o Ctrl + rueda'));
     this.listenBtn = h('button', { class: 'btn small', type: 'button', onclick: () => this.toggleFull() }, '▶ Escuchar la canción');
     this.startIn = h('input', { type: 'text', class: 'tin', inputmode: 'decimal', 'aria-label': 'Empieza en' });
     this.endIn = h('input', { type: 'text', class: 'tin', inputmode: 'decimal', 'aria-label': 'Termina en' });
@@ -104,7 +104,7 @@ export class SongPanel {
 
   async pick(file) {
     const ok = await this.app.loadFile(file);
-    if (ok) {
+    if (ok && this.app.mediaAlert.hidden) {
       toast('Listo. Elige el tramo y sigue con la letra.');
     }
   }

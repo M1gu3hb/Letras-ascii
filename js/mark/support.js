@@ -17,6 +17,7 @@ export const buzz = (ms) => {
 
 // tic de la cuenta regresiva (un tono corto; si el navegador no deja, no pasa nada)
 let actx = null;
+export function disposeBeep() { const ctx = actx; actx = null; if (ctx) { try { Promise.resolve(ctx.close()).catch(() => {}); } catch {} } }
 export function beep(freq, ms = 90, vol = 0.07) {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;

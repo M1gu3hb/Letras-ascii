@@ -5,6 +5,7 @@ import {readPayloadFromHtml} from '../js/import.js';
 const {srv,port}=serve('site');const browser=await launch();const errors=[];let checks=0;
 const check=(value,message)=>{assert.ok(value,message);checks++;console.log('ok',message)};
 const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});const page=await context.newPage();watch(page,errors);
+context.setDefaultTimeout(20000);
 try {
  await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media);
@@ -44,7 +45,7 @@ try {
  await recipient.getByLabel('Posición en la canción').press('Home'); await recipient.getByLabel('Posición en la canción').press('ArrowRight');await recipient.screenshot({path:'test/audit/recipient-desktop.png'});
  await page.setViewportSize({width:320,height:568});
  const failed=await page.evaluate(async()=>{const a=window.__app;const original=a.persistence.write;a.persistence.write=async()=>{throw Error('quota')};a.project.text='Conservar ante error';const id=a.id;await a.save();await a.newAndReset();const stayed=a.id===id;a.persistence.write=original;return stayed;});
- check(failed && await page.locator('.save-alert').isVisible(),'storage failures stay visible on mobile and block project switching');
+ check(failed && await page.locator('.save-alert:not(.media-save-alert)').isVisible(),'storage failures stay visible on mobile and block project switching');
  await page.evaluate(()=>window.__app.save());
  const cancelled=await page.evaluate(async()=>{const a=window.__app;let read=false;const f=new File(['test'],'cancel.wav',{type:'audio/wav'});f.arrayBuffer=async()=>{read=true;return new ArrayBuffer(1)};const promise=a.loadFile(f);a.cancelLoad();return {result:await promise,read};});
  check(cancelled.result===false && !cancelled.read,'cancel prevents reading/decoding a pending file');

@@ -47,6 +47,7 @@ export class App {
     this.fullUrl = null;
     this.tab = 'song';
     this.format = lsGet('format', 'wide');
+    if (!FORMATS[this.format]) this.format = 'wide';
     this.kind = 'demo'; // qué muestra el escenario: 'demo' (tutorial), 'mine' (tu letra, tiempos automáticos), 'blank' (marcando) o 'real'
     this.prevChoice = lsGet('prevmode', '') === 'demo' ? 'demo' : null;
     this.hadText = false;
@@ -169,6 +170,7 @@ export class App {
       h('div', { class: 'trow extra' }, this.loopBtn, this.rateSel, fmtSel),
     );
     this.savedEl = h('span', { class: 'saved', role: 'status' }, '');
+    this.mediaAlert = h('div', { class: 'save-alert media-save-alert', role: 'alert', hidden: true }, 'No pude guardar el archivo de la canción. Conserva esta pestaña abierta y descarga el HTML antes de recargar. Después tendrás que elegir la canción otra vez.');
     this.saveAlert = h('div', { class: 'save-alert', role: 'alert', hidden: true }, 'No se pudo guardar. Conserva esta pestaña abierta y libera espacio antes de cambiar de proyecto.');
     this.nameEl = h('input', { class: 'pname', type: 'text', placeholder: 'Nombre del proyecto', 'aria-label': 'Nombre del proyecto', maxlength: 60 });
     this.nameEl.addEventListener('input', () => {
@@ -185,8 +187,15 @@ export class App {
       this.tabBtns[id] = b;
       this.tabsEl.append(b);
     }
-    this.panelEl = h('div', { class: 'panel', role: 'tabpanel' });
-    this.status = h('div', { class: 'loading hidden', role: 'status' });
+    this.panelEl = h('div', { class: 'panel' });
+    this.loadText = h('div', { class: 'ltxt' });
+    this.loadProgress = h('i');
+    this.loadCancel = h('button', { class: 'btn', type: 'button', onclick: () => this.cancelLoad() }, 'Cancelar carga');
+    this.status = h('div', { class: 'loading hidden', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Procesando canción', tabindex: '-1' }, h('div', { class: 'lbox' }, this.loadText, h('div', { class: 'lbar' }, this.loadProgress), this.loadCancel));
+    this.scope.listen(this.status, 'keydown', (event) => {
+      if (event.key === 'Tab') { event.preventDefault(); (this.loadCancel.hidden ? this.status : this.loadCancel).focus(); }
+      if (event.key === 'Escape' && !this.loadCancel.hidden) { event.preventDefault(); event.stopPropagation(); this.cancelLoad(); }
+    });
     const left = h('section', { class: 'left' }, h('div', { class: 'stagewrap' }, this.stage), this.transport);
     const right = h('aside', { class: 'right' }, this.tabsEl, this.panelEl);
     this.top = top;
@@ -199,7 +208,7 @@ export class App {
     this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
-    root.replaceChildren(top, this.saveAlert, this.grid, this.theater, this.status);
+    root.replaceChildren(top, this.saveAlert, this.mediaAlert, this.grid, this.theater, this.status);
     this.applyFormat();
   }
 
@@ -220,7 +229,9 @@ export class App {
   }
 
   selectTab(id) {
+    if (this.destroyed) return;
     if (this.tab !== id) toast(null);
+    this.previousTab = this.tab;
     this.tab = id;
     this.root.dataset.tab = id;
     // si en la pestaña anterior el escenario estaba oculto y quedaron cambios sin dibujar, ahora que se ve se ponen al día
@@ -248,7 +259,6 @@ export class App {
     for (const [k, p] of Object.entries(this.panels)) p.el.hidden = k !== id;
     this.panelEl.classList.toggle('fit', id === 'mark');
     this.panelEl.scrollTop = 0;
-    this.panelEl.setAttribute('aria-labelledby', 'tab-' + id);
     if (this.panels[id].show) this.panels[id].show();
     if (this.scene && this.previewKind() !== this.kind) this.rebuildSoon();
     this.syncDemo();
@@ -523,10 +533,24 @@ export class App {
   busy(msg, frac) {
     if (!msg) {
       this.status.classList.add('hidden');
+      if (this.loadingFocus) {
+        [this.top.inert, this.grid.inert] = this.loadingInert;
+        if (this.loadingFocus.isConnected) this.loadingFocus.focus({ preventScroll: true });
+        this.loadingFocus = null;
+      }
       return;
     }
+    const opening = this.status.classList.contains('hidden');
+    if (opening) {
+      this.loadingFocus = document.activeElement || this.projBtn;
+      this.loadingInert = [this.top.inert, this.grid.inert];
+      this.top.inert = this.grid.inert = true;
+    }
     this.status.classList.remove('hidden');
-    this.status.replaceChildren(h('div', { class: 'lbox' }, h('div', { class: 'ltxt' }, msg), h('div', { class: 'lbar' }, h('i', { style: { width: Math.round((frac || 0) * 100) + '%' } })), this.loadController && frac < .99 ? h('button', { class: 'btn', type: 'button', onclick: () => this.cancelLoad() }, 'Cancelar carga') : null));
+    this.loadText.textContent = msg;
+    this.loadProgress.style.width = `${Math.round((frac || 0) * 100)}%`;
+    this.loadCancel.hidden = !this.loadController || frac >= .99;
+    if (opening || document.activeElement === this.loadCancel && this.loadCancel.hidden) (this.loadCancel.hidden ? this.status : this.loadCancel).focus({ preventScroll: true });
   }
 
   cancelLoad() { this.loadController?.abort(); this.loadController = null; this.busy(null); }

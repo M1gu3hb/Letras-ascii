@@ -45,7 +45,7 @@ export async function bootPlayer(payload) {
   const play = h('button', { type: 'button', class: 'btn primary', onclick: () => player.tap() }, 'Reproducir');
   const restart = h('button', { type: 'button', class: 'btn', onclick: () => player.start(0) }, 'Volver al inicio');
   const seek = h('input', { type: 'range', min: 0, max: payload.dur, step: .05, value: 0, 'aria-label': 'Posición en la canción' });
-  seek.addEventListener('input', () => player.seek(+seek.value));
+  seek.addEventListener('input', () => { if (player.state === 'intro' || player.state === 'ended') player.setState('paused'); player.seek(+seek.value); update(); });
   const time = h('span', { class: 'player-time' });
   const caption = h('p', { class: 'player-caption', 'aria-live': 'polite' }, payload.intro || 'Pulsa reproducir para comenzar');
   const transcript = h('details', { class: 'player-transcript' }, h('summary', {}, 'Ver la letra'), h('div', {}, ...String(payload.text || '').split('\n').map((line) => h('p', {}, line))));
@@ -62,7 +62,11 @@ export async function bootPlayer(payload) {
   };
   player.onState = update;
   const timer = setInterval(update, 200); update();
-  window.addEventListener('pagehide', () => { clearInterval(timer); player.destroy(); URL.revokeObjectURL(url); }, { once: true });
+  window.addEventListener('pagehide', (event) => {
+    if (event.persisted) { if (player.state === 'playing') player.pause(); return; }
+    clearInterval(timer); clearTimeout(rt); player.destroy(); URL.revokeObjectURL(url);
+  });
+  window.addEventListener('pageshow', (event) => { if (event.persisted) { scene.resize(); update(); } });
   window.__player = player;
   window.__scene = scene;
   document.documentElement.classList.add('ready');

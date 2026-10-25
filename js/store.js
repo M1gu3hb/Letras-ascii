@@ -37,8 +37,13 @@ const wrap = (mode, fn) =>
 // así el guardado automático no reescribe la canción cada vez.
 export const putProject = (id, project, name) => wrap('readwrite', (s) => s.put({ id, kind: 'project', name, updated: Date.now(), project }));
 export const getProject = (id) => wrap('readonly', (s) => s.get(id));
-export const putFile = (id, blob, name, type) => wrap('readwrite', (s) => s.put({ id: id + ':file', kind: 'file', blob, name, type }));
-export const getFile = (id) => wrap('readonly', (s) => s.get(id + ':file'));
+export async function putFile(id, source, name, type, mediaId) {
+  // Some WebKit storage contexts reject Blob/File serialization. ArrayBuffer
+  // is structured-cloneable there; getFile recreates the same public Blob API.
+  const bytes = await source.arrayBuffer();
+  return wrap('readwrite', (s) => s.put({ id: id + ':file', kind: 'file', bytes, name, type: type || source.type, mediaId }));
+}
+export const getFile = (id) => wrap('readonly', (s) => s.get(id + ':file')).then((record) => record?.bytes instanceof ArrayBuffer ? { ...record, blob: new Blob([record.bytes], { type: record.type }) } : record);
 export const delProject = (id) =>
   wrap('readwrite', (s) => {
     s.delete(id);

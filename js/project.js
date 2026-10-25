@@ -132,6 +132,10 @@ export function normalize(p) {
     if (value !== undefined) out.style[key] = Number.isFinite(value) ? Math.max(lo, Math.min(hi,value)) : d.style[key];
   }
   out.offset = Number.isFinite(out.offset) ? Math.max(-.6, Math.min(.6,out.offset)) : d.offset;
+  out.seed = Number.isFinite(out.seed) ? out.seed | 0 : d.seed;
+  const enums = { focus: ['word','line'], palette: ['auto',...Object.keys(PALETTES)], mood: ['auto',...MOOD_NAMES], caps: ['off','all','auto'], fill: Object.keys(FILL_LABELS), weight: ['normal','bold'], fillch: ['@','#','%','&','8','0'] };
+  for (const [key, values] of Object.entries(enums)) if (!values.includes(out.style[key])) out.style[key] = d.style[key];
+  for (const key of ['ball','floor']) if (typeof out.style[key] !== 'boolean') out.style[key] = d.style[key];
   for (const key of ['start','end']) out.clip[key] = Number.isFinite(out.clip[key]) ? Math.max(0,out.clip[key]) : 0;
   if (!Array.isArray(out.sync)) out.sync = [];
   out.sync = phrasesOf(out.text).map((phrase,i) => {
@@ -141,7 +145,20 @@ export function normalize(p) {
     return { t: s.t, wt: [...s.wt], wd: s.wt.map((_,k) => Number.isFinite(s.wd?.[k]) ? Math.max(0,Math.min(60,s.wd[k])) : .2) };
   });
   if (!out.over || typeof out.over !== 'object') out.over = {};
-  out.over = Object.fromEntries(Object.entries(out.over).filter(([key,value]) => /^(p\d+|\d+\.\d+)$/.test(key) && value && typeof value === 'object' && !Array.isArray(value)));
+  const cleaned = {};
+  for (const [key,value] of Object.entries(out.over)) {
+    if (!/^(p\d+|\d+\.\d+)$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
+    const o = {};
+    const choices = key.startsWith('p') ? { mood: MOOD_NAMES, exit: Object.keys(EXIT_LABELS) } : { face: FACE_NAMES, col: COLOR_NAMES, fx: Object.keys(APPEAR_LABELS), hold: Object.keys(HOLD_LABELS), pal: [0,4,5] };
+    for (const [field, values] of Object.entries(choices)) if (values.includes(value[field])) o[field] = value[field];
+    if (!key.startsWith('p')) {
+      for (const [field,[lo,hi]] of Object.entries({size:[.5,1.8],thick:[-1,1],ext:[0,2.2]})) if (Number.isFinite(value[field])) o[field] = Math.max(lo,Math.min(hi,value[field]));
+      for (const field of ['fill','stretch','caps']) if (typeof value[field] === 'boolean') o[field] = value[field];
+      if (Array.isArray(value.fxs)) o.fxs = value.fxs.filter((fx) => Object.hasOwn(WORDFX_LABELS,fx));
+    }
+    if (Object.keys(o).length) cleaned[key] = o;
+  }
+  out.over = cleaned;
   return out;
 }
 

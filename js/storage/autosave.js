@@ -19,21 +19,23 @@ export class Autosave {
   save(id, project) { this.schedule(id, project); return this.flush(); }
   flush() {
     clearTimeout(this.timer);
-    const batch = [...this.pending];
-    this.pending.clear();
     this.queue = this.queue.then(async () => {
+      // Read at execution time: an earlier write may have failed while this
+      // flush was queued. Its retry must finish before switching projects.
+      const batch = [...this.pending];
+      this.pending.clear();
       let ok = true;
       for (const [id, snapshot] of batch) {
         try {
           await this.write(id, snapshot, snapshot.name || snapshot.song?.name || 'Sin nombre');
-          if (this.latest.get(id) === snapshot) this.onState('saved', id);
+          if (this.latest.get(id) === snapshot) { this.latest.delete(id); this.onState('saved', id); }
         } catch (error) {
           if (this.latest.get(id) === snapshot && !this.pending.has(id)) this.pending.set(id, snapshot);
           this.onState('error', id, error);
           ok = false;
         }
       }
-      return ok;
+      return ok && this.pending.size === 0;
     });
     return this.queue;
   }

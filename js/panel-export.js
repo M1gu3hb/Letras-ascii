@@ -1,6 +1,6 @@
 // Paso 6: descargar el archivo final y verlo como lo verá ella.
 import { h, toast, fmtBytes, download } from './ui.js';
-import { buildHtml, audioPlan, exportReady, fileNameOf } from './export.js';
+import { buildHtml, audioPlan, exportReady, fileNameOf, exportSnapshot } from './export.js';
 import { fmtTime } from './project.js';
 
 export class ExportPanel {
@@ -50,12 +50,15 @@ export class ExportPanel {
     if (plan && plan.bytes > 22 * 1048576) msgs.push('El archivo va a pesar bastante. Si quieres uno más ligero, elige un tramo más corto.');
     this.warn.classList.toggle('hidden', !msgs.length);
     this.warn.replaceChildren(...msgs.map((m) => h('p', {}, m)));
-    const ok = r.hasSong && r.done > 0;
+    const ok = r.hasSong && r.done > 0 && !this.making;
     this.prevBtn.disabled = !ok;
     this.dlBtn.disabled = !ok;
   }
   async make(kind) {
+    if (this.making) return;
+    this.making = true;
     const app = this.app;
+    const snapshot = exportSnapshot(app), filename = fileNameOf(snapshot);
     app.player.pause();
     app.audioFull.pause();
     let win = null;
@@ -64,9 +67,10 @@ export class ExportPanel {
     this.busy.textContent = 'Armando el archivo…';
     await new Promise((r) => setTimeout(r, 30));
     try {
-      const { blob, bytes } = await buildHtml(app, { title: app.project.name });
+      const { blob, bytes, plan } = await buildHtml(snapshot, { title: snapshot.project.name });
+      if (app.destroyed) { win?.close(); return; }
       if (kind === 'download') {
-        download(blob, fileNameOf(app));
+        download(blob, filename);
         toast(`Descargado (${fmtBytes(bytes)}). Ábrelo para probarlo.`);
       } else {
         const url = URL.createObjectURL(blob);
@@ -74,13 +78,14 @@ export class ExportPanel {
         else window.open(url, '_blank');
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       }
-      this.busy.textContent = `Archivo de ${fmtBytes(bytes)}`;
+      this.busy.textContent = `Archivo de ${fmtBytes(bytes)} · audio ${plan.label}`;
     } catch (e) {
       if (win) win.close();
       this.busy.textContent = '';
       toast(e.message || 'No pude armar el archivo.', 'bad');
     } finally {
-      this.paint();
+      this.making = false;
+      if (!app.destroyed) this.paint();
     }
   }
 }

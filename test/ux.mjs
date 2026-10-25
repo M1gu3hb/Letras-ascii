@@ -22,6 +22,9 @@ const DEVICES = {
   'tablet-l': { viewport: { width: 1180, height: 820 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true, touch: true },
   'desk-1440': { viewport: { width: 1440, height: 900 } },
   'desk-1024': { viewport: { width: 1024, height: 680 } },
+  'phone-360-original': { viewport: { width: 360, height: 800 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, touch: true },
+  'desk-1024-original': { viewport: { width: 1024, height: 768 } },
+  'desk-1363-original': { viewport: { width: 1363, height: 936 } },
 };
 const TABS = ['song', 'text', 'mark', 'style', 'words', 'export'];
 const only = process.argv[2] ? process.argv[2].split(',') : Object.keys(DEVICES);

@@ -31,13 +31,14 @@ export class WordsPanel {
 
     app.on('project', () => this.onProject());
     app.on('reset', () => {
+      clearTimeout(this._t);
       this.sel = null;
       this.paintAll();
     });
     app.on('rebuilt', () => this.onRebuilt());
     app.on('tick', () => this.tick());
     app.on('state', () => this.startRaf());
-    app.on('tab', () => this.startRaf());
+    app.on('tab', () => { if (app.tab !== 'words') clearTimeout(this._t); this.startRaf(); });
     app.on('clip', () => this.softRefresh(true));
     app.on('media', () => this.softRefresh(true));
     app.scope.listen(window, 'keydown', (e) => this.onKey(e));
@@ -275,6 +276,7 @@ export class WordsPanel {
   }
 
   preview() {
+    if (this.app.destroyed || this.app.tab !== 'words') return;
     const info = this.word();
     if (!info) return;
     const app = this.app;
@@ -668,6 +670,6 @@ export class WordsPanel {
     set('stretch', w.stretch ? 'se estira' : 'normal');
     set('fx', (w.fxs || []).length ? w.fxs.map((f) => WORDFX_LABELS[f]).join(', ') : 'ninguno');
   }
-  destroy() { cancelAnimationFrame(this._raf); this.strip.destroy?.(); }
+  destroy() { clearTimeout(this._t); cancelAnimationFrame(this._raf); this.strip.destroy?.(); }
 
 }
