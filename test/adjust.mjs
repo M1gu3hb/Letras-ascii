@@ -45,6 +45,12 @@ try{
   if(!touch){await block.focus();await page.keyboard.press('Control+z');assert.deepEqual((await snapshot()).sync,initial.sync);await page.keyboard.press('Control+Shift+z');assert.equal((await snapshot()).sync[0].wt[1],13.9);check(true,'desktop: keyboard undo/redo restores exact values');}
   const duration=page.getByRole('spinbutton',{name:'Duración cantada en segundos',exact:true});
   await duration.fill('.35');await duration.press('Tab');assert.equal((await snapshot()).sync[0].wd[1],.35);
+  const ab=page.getByRole('button',{name:'Bucle A–B',exact:true}),listen=page.getByRole('button',{name:'Escuchar palabra',exact:true});
+  touch?await ab.tap():await ab.click();
+  touch?await listen.tap():await listen.click();
+  await page.waitForFunction(()=>window.__app.player.state==='playing'&&!window.__app.audio.paused);
+  const stop=page.getByRole('button',{name:'Detener audición',exact:true});touch?await stop.tap():await stop.click();
+  check(true,`${width}: native audition controls remain reachable after editing numeric fields`);
   check(true,`${width}: duration and exact undo/redo work with the preview collapsed`);
   await page.getByRole('button',{name:'Ver la frase completa',exact:true}).click();
   const beforeCancel=await snapshot();

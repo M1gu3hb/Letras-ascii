@@ -4,7 +4,7 @@
 
 Trabajo iniciado el 25 de octubre de 2026 desde `e7ed2be6d8d3d41d716fff9aa4c9511837de4f31`, comprobado tanto en el checkout como en `refs/heads/main` del remoto. El punto de partida incluye las reparaciones de fiabilidad de PR #2 (`bf0a284`) y de captura móvil de PR #3 (`e7ed2be`). Se conservan IndexedDB v2, proyectos v3, importaciones antiguas, exportación por instantánea y el espacio de captura independiente del formato.
 
-El encargo adjunto informa un despliegue previo READY (`dpl_Gcm4viFP4jV9wRUzFxNrnuMfJhtU`) en el proyecto existente `letras-ascii`. Ese estado de Vercel no se pudo confirmar desde esta máquina: el dominio público y la API de GitHub devolvieron 403 del proxy de red. Un HEAD publicado en GitHub no demuestra por sí mismo qué versión sirve producción.
+El encargo adjunto informa un despliegue previo READY (`dpl_Gcm4viFP4jV9wRUzFxNrnuMfJhtU`) en el proyecto existente `letras-ascii`. Al inicio hubo respuestas 403 del proxy. Una vez disponible el acceso, se confirmó que `app.js` y `app.css` públicos coincidían exactamente con el build de `e7ed2be`. El ID histórico de Vercel sigue siendo una referencia del encargo; un HEAD publicado en GitHub no demuestra por sí mismo qué versión sirve producción.
 
 La aplicación continúa siendo JavaScript por módulos + Canvas 2D, compilado con esbuild y Node 24. Audio, proyectos e importaciones son locales. No se agregan cuentas, backend, transcripción, alojamiento de medios, MP4 ni integración con GLYPHOS.
 
@@ -65,8 +65,6 @@ npm test
 
 El runner completo incluye ahora 15 suites. El job WebKit de CI incluye `adjust` y `reading`; configurar ese job no equivale a haberlo ejecutado desde esta máquina. Las capturas están en `test/audit/timeline/` (ignorado por Git). Los casos AAC/Opus/MP3 de reauditoría son condicionales a fixtures locales. No se certifican iPhone/Safari físicos ni teclado virtual real mediante emulación de viewport.
 
-## Publicación
-
 ## Resultado de la validación local
 
 Commit funcional: `4526430`. Node 24.19.0, Playwright Core 1.64.1 y Chromium del sistema 154.0.8037.57, en Linux.
@@ -75,11 +73,12 @@ Commit funcional: `4526430`. Node 24.19.0, Playwright Core 1.64.1 y Chromium del
 |---|---|
 | Batería completa `npm test` con `PLAYWRIGHT_EXECUTABLE_PATH` | Aprobada: lint, build, 25 unitarias de ese punto y las 15 suites de navegador. |
 | Cierre tras los ajustes finales | Lint, build y 28 unitarias aprobados; repeticiones dirigidas de Ajustar, lectura/exportación y Palabras aprobadas. |
-| Ajustar | 31 comprobaciones; toque, mouse y teclado; 320×568, 390×700 y 1440×900. Incluye seleccionar otra frase sin recentrar y reanudar al final de A–B. |
+| Ajustar | 34 comprobaciones; toque, mouse y teclado; 320×568, 390×700 y 1440×900. Incluye seleccionar otra frase sin recentrar, reanudar al final de A–B y volver a sus controles después de editar campos. |
 | Lectura/exportación | 38 comprobaciones; cuatro combinaciones de render, dos focos, nueve tamaños, siete familias, reduced motion y recorrido de descarga/reproducción/reimportación/recarga. |
 | Captura móvil existente | 107 comprobaciones aprobadas en Chromium; cinco tamaños y tres formatos, con toques nativos. |
 | UX existente | Matriz de 14 tamaños aprobada. |
-| No ejecutado aquí | WebKit; teléfonos físicos/teclado virtual; tres fixtures condicionales AAC/Opus/MP3 que no estaban disponibles. |
+| WebKit | Job de GitHub Actions aprobado para el PR principal: smoke, reliability, reaudit, mobile-capture, adjust y reading. No se instaló WebKit en la máquina local. |
+| No ejecutado | Teléfonos físicos/teclado virtual; tres fixtures condicionales AAC/Opus/MP3 que no estaban disponibles. |
 
 Las últimas regresiones cubren también una elección manual de fuente/color en la última palabra: una heurística de rima podía reemplazarla, y ahora la decisión manual vuelve a aplicarse después de la heurística.
 
@@ -96,8 +95,10 @@ El [HTML autónomo reproducido](images/timeline/exported-karaoke.png) incluye fu
 
 ## Publicación
 
-Rama de trabajo: `codex/timeline-legibilidad-ux`. Mantener el proyecto Vercel `letras-ascii`, build `node build.mjs` y salida `site/`. No editar bundles generados ni crear un segundo proyecto.
+La implementación principal se integró mediante el [PR #4](https://github.com/M1gu3hb/Letras-ascii/pull/4), commit `aee9c1701b1ae10a0b7db99b14ce967baec628b4`, con ambos jobs de GitHub Actions aprobados. Vercel informó despliegue completado para ese SHA en el proyecto existente. La prueba pública marcó tres frases con toques nativos y corrigió inicio/duración, pero encontró que la tira fija podía cubrir A–B al volver desde los campos. La corrección posterior, en `codex/adjust-scroll-visibility`, mide el dock y reserva ese espacio mediante scroll-padding; también evita oscilaciones al entrar/salir del modo compacto. Su regresión toca los controles después de editar, sin forzar eventos ni ocultar la tira.
+
+Mantener el proyecto Vercel `letras-ascii`, build `node build.mjs` y salida `site/`. No editar bundles generados ni crear un segundo proyecto.
 
 Antes de integrar: CI del commit final verde, revisión del diff y PR con problema, comportamiento y evidencia. Después: verificar que el despliegue de producción está READY, que su `githubCommitSha` coincide con el commit integrado y que el dominio público sirve sus recursos. Ejecutar allí selección/corrección y descarga real con audio sintético; registrar PR, commit y despliegue. Un preview o un build local no cumplen esta comprobación.
 
-La red actual bloqueó API de GitHub y dominio público. Se guardaron adiciones para `api.github.com`, `letras-ascii.vercel.app`, `api.vercel.com` y `vercel.com` en el borrador del entorno; guardarlas no las aplica ni publica. No hacen falta secretos para desarrollar localmente. Antes de solicitar credenciales de despliegue, comprobar la integración GitHub–Vercel y las autenticaciones existentes.
+Se guardaron adiciones para `api.github.com`, `letras-ascii.vercel.app`, `api.vercel.com` y `vercel.com` en el borrador del entorno. El acceso efectivo se verificó con operaciones reales; guardar un borrador no demuestra que una ruta funcione. La prueba HTTPS de Chromium utilizó la CA del proxy ya confiada por el sistema/NSS y requirió ejecutar el navegador con acceso de escritura a su almacén NSS, manteniendo activa la validación TLS. No hacen falta secretos para desarrollar localmente y la publicación utilizó la integración GitHub–Vercel existente.
