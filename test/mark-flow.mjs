@@ -273,13 +273,17 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   // pausa con el botón de arriba
   await pg.waitForTimeout(700);
   const at = await audioNow(pg);
-  await pg.click('.mtopbtn');
+  const bounce = await pg.evaluate(() => {
+    document.querySelector('.mtopbtn').click();
+    const m = window.__app.panels.mark, waiting = m.resumeBtn.classList.contains('wait');
+    m.resumeBtn.click();
+    return { waiting, phase: m.phase };
+  });
   await waitPhase(pg, 'pause', 1500);
   ok((await pg.evaluate(() => window.__app.player.state)) !== 'playing', 'pausa: la canción se detiene');
   ok(!(await visible(pg, '.pad')) && (await txt(pg, '.mcard.pause .mtitle')) === 'En pausa', 'pausa: no hay botón grande y dice «En pausa»');
-  ok(await waiting(pg, '.mcard.pause .btn.primary'), 'pausa: «Seguir» espera un instante por si el dedo rebota');
-  await pg.click('.mcard.pause .btn.primary', { force: true }).catch(() => {});
-  ok((await phase(pg)) === 'pause', 'pausa: un toque inmediato NO reanuda');
+  ok(bounce.waiting, 'pausa: «Seguir» espera un instante por si el dedo rebota');
+  ok(bounce.phase === 'pause', 'pausa: un toque inmediato NO reanuda');
   await pg.waitForTimeout(600);
   ok(!(await waiting(pg, '.mcard.pause .btn.primary')), 'pausa: «Seguir» ya se puede tocar');
   await pg.click('.mcard.pause .btn.primary');
