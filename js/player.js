@@ -115,10 +115,11 @@ export class Player {
       return;
     }
     this.audio.playbackRate = this.rate;
+    this.lastPlayError = null;
     try {
       await this.audio.play();
     } catch (e) {
-      if (epoch === this.playEpoch && !this.destroyed) this.setState(this.mode === 'player' ? 'intro' : 'paused');
+      if (epoch === this.playEpoch && !this.destroyed) { this.lastPlayError = { name: e.name, message: e.message }; this.setState(this.mode === 'player' ? 'intro' : 'paused'); }
       return;
     }
     if (epoch !== this.playEpoch || this.destroyed || this.state !== 'playing') return;

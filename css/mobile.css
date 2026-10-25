@@ -10,6 +10,7 @@
 }
 
 @media (max-width: 600px) {
+  .studio { touch-action: manipulation; }
   .studio .top { padding: calc(6px + env(safe-area-inset-top)) 10px 6px; gap: 6px; }
   .studio .brand { display: none; }
   .studio .top .pname { max-width: none; font-size: 16px; min-height: 44px; }
@@ -26,9 +27,9 @@
   }
   .studio[data-fmt='tall'][data-preview='open'] .stagewrap { display: block; }
   .studio[data-fmt='tall'][data-preview='open'] .stage { width: min(100%,calc(var(--stage-h) * .5625)); }
-  .studio .trow.main { display: grid; grid-template-columns: 44px 44px minmax(0,1fr) 52px 44px; gap: 0 6px; }
+  .studio[data-fmt] .trow.main { display: grid; grid-template-columns: 44px 44px minmax(0,1fr) 52px 44px; gap: 0 6px; }
   .studio .trow.main .tbtn { height: 44px; min-width: 0; padding: 0 5px; border-radius: 10px; }
-  .studio .trow.main .time { grid-column: 3; grid-row: 1; text-align: center; font-size: 10px; }
+  .studio[data-fmt] .trow.main .time { grid-column: 3; grid-row: 1; text-align: center; font-size: 10px; }
   .studio .trow.main .preview-toggle { display: grid; grid-column: 4; grid-row: 1; font: 800 12px var(--ui); }
   .studio .trow.main .moreBtn { grid-column: 5; grid-row: 1; }
   .studio .trow.main .scrub { grid-column: 1 / -1; grid-row: 2; margin: 0; width: 100%; min-width: 0; height: 32px; }
@@ -57,6 +58,7 @@
   .studio[data-tab='export'] .pane > .row .btn { min-height: 52px; }
   .studio .export-info { font-size: 14px; }
   .studio:has(.panel textarea:focus) .left, .studio.editing-text .left { display: none; }
+  .studio:has(.panel textarea:focus) .grid, .studio.editing-text .grid { grid-template-rows: minmax(0,1fr); grid-template-columns: minmax(0,1fr); }
 
   /* The current lyric and capture button get the screen, not the artwork. */
   .studio[data-tab='mark'][data-fmt] .left { display: none; }

@@ -21,7 +21,9 @@ async function open(width,height,strict=false){
 }
 async function fill(page,fmt){
  await page.getByRole('button',{name:'Más controles',exact:true}).tap();await page.getByLabel('Forma de la pantalla',{exact:true}).selectOption(fmt);await page.getByRole('button',{name:'Más controles',exact:true}).tap();
- await page.locator('#tab-text').tap();await page.locator('.lyrics').fill('Música contigo\nToca ahora\nÚltima frase');await page.getByRole('button',{name:'Siguiente: Marcar',exact:true}).tap();
+ await page.locator('#tab-text').tap();await page.locator('.lyrics').fill('Música contigo\nToca ahora\nÚltima frase');
+ if((await page.viewportSize()).width<=600)check(await page.locator('.step-footer').evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-innerHeight)<2),'text editing uses the remaining screen instead of leaving an empty grid row');
+ await page.getByRole('button',{name:'Siguiente: Marcar',exact:true}).tap();
  check(await page.evaluate(()=>window.__app.tab==='mark'),'one real touch continues from text ('+fmt+')');
 }
 async function hitArea(page){return page.evaluate(()=>{const a=window.__app,m=a.panels.mark,r=m.pad.getBoundingClientRect(),panel=a.panelEl.getBoundingClientRect();return{hidden:!a.canvas.offsetParent,w:r.width,h:r.height,inside:r.y>=panel.y&&r.bottom<=panel.bottom+1&&r.y>=0&&r.bottom<=innerHeight,hit:[.15,.5,.85].every(x=>[.15,.5,.85].every(y=>document.elementFromPoint(r.x+r.width*x,r.y+r.height*y)?.closest('.pad')===m.pad)),scroll:m.el.scrollHeight-m.el.clientHeight}})}
@@ -32,7 +34,7 @@ try{
   await openMarkOptions(page);await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap();
   await page.locator('.mcard.idle .primary').tap();
   try {await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused)}
-  catch(error){console.log('mobile start diagnostic',await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,reason:m.reason,countOn:m.countOn,player:a.player.state,paused:a.audio.paused,ready:a.audio.readyState,src:a.audio.currentSrc,error:a.audio.error?.message,tab:a.tab,active:document.activeElement?.outerHTML.slice(0,250),button:m.startBtn.getBoundingClientRect().toJSON(),panel:a.panelEl.getBoundingClientRect().toJSON(),scroll:m.el.scrollTop}}));throw error}
+  catch(error){console.log('mobile start diagnostic',await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,reason:m.reason,countOn:m.countOn,player:a.player.state,paused:a.audio.paused,ready:a.audio.readyState,playError:a.player.lastPlayError,src:a.audio.currentSrc,error:a.audio.error?.message,tab:a.tab,active:document.activeElement?.outerHTML.slice(0,250),button:m.startBtn.getBoundingClientRect().toJSON(),panel:a.panelEl.getBoundingClientRect().toJSON(),scroll:m.el.scrollTop}}));throw error}
   const area=await hitArea(page);check(area.hidden&&area.inside&&area.hit&&area.h>=140,`${width}×${height} ${fmt}: the capture pad is visible, unobstructed and owns the workspace ${JSON.stringify(area)}`);
   await page.locator('.pad').tap();await page.waitForTimeout(360);
   const first=await page.locator('.pad').boundingBox();await page.getByRole('button',{name:'Pausar',exact:true}).tap();await page.waitForTimeout(500);
