@@ -2838,6 +2838,8 @@ summary {
  .mcard.done .mtitle, .mcard.done .mask, .mcard.done .mbtnrow { grid-column: 1 / -1; }
 }
 .tbtn.restart { font-size: 10px; padding: 0; }
+.wave-zoom-hint { flex-basis: 180px; }
+@media (pointer: coarse), (any-pointer: coarse) { .wave-zoom-hint { flex-basis: 100%; } }
 .save-alert { flex: none; color: var(--bad); padding: 8px 12px; border-bottom: 1px solid var(--bad); font-size: 13px; background: var(--panel); }
 @media (pointer: coarse), (any-pointer: coarse) {
  .studio input[type='range'], .recipient-controls input[type='range'] { height: 44px; }
