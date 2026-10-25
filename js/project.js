@@ -29,6 +29,8 @@ export const PALETTE_LABELS = { auto: 'Automático', rosa: 'Rosa y crema', hielo
 export const COLOR_NAMES = ['white', 'cream', 'blush', 'rose', 'pink', 'ruby', 'orange', 'amber', 'gold', 'mint', 'cyan', 'ice', 'violet', 'lav'];
 export const COLOR_LABELS = { white: 'Blanco', cream: 'Crema', blush: 'Rubor', rose: 'Rosa', pink: 'Fucsia', ruby: 'Rubí', orange: 'Naranja', amber: 'Ámbar', gold: 'Dorado', mint: 'Menta', cyan: 'Cian', ice: 'Hielo', violet: 'Violeta', lav: 'Lavanda' };
 export const APPEAR_LABELS = {
+  instant: 'Instantánea',
+  quick: 'Rápida',
   decode: 'Decodificar',
   rise: 'Subir',
   drop: 'Caer',
@@ -50,8 +52,12 @@ export const FILL_LABELS = { auto: 'Automático', edge: 'Bordes y @', self: 'Con
 
 export function defaultStyle() {
   return {
+    mainMode: 'ascii', mainFace: 'auto', mainColor: 'auto',
+    karaokeMode: 'normal', karaokeFace: 'round', karaokeSize: 1, karaokeDetail: 1, karaokeContrast: 1, karaokeOn: true,
+    entryFx: 'quick', entryMs: 80,
+    randomGroups: ['faces', 'colors', 'backgrounds', 'animations'],
     focus: 'word',
-    random: 0.35,
+    random: 0.45,
     ball: true,
     palette: 'auto',
     faces: FACE_NAMES.slice(),
@@ -121,6 +127,15 @@ export function normalize(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p)) p = {};
   const d = newProject();
   const out = { ...d, ...p, style: { ...d.style, ...(p.style || {}) }, clip: { ...d.clip, ...(p.clip || {}) } };
+  // Proyectos anteriores conservan sus dos renderers ASCII; sus tiempos no cambian.
+  if (p.style && !Object.hasOwn(p.style, 'mainMode')) { out.style.karaokeMode = 'ascii'; out.style.entryFx = 'auto'; }
+  for (const key of ['mainMode', 'karaokeMode']) if (!['ascii', 'normal'].includes(out.style[key])) out.style[key] = d.style[key];
+  for (const key of ['mainFace', 'karaokeFace']) if (![...(key === 'mainFace' ? ['auto'] : []), ...FACE_NAMES].includes(out.style[key])) out.style[key] = d.style[key];
+  if (!['auto', ...COLOR_NAMES].includes(out.style.mainColor)) out.style.mainColor = 'auto';
+  if (!['auto', ...Object.keys(APPEAR_LABELS)].includes(out.style.entryFx)) out.style.entryFx = 'quick';
+  for (const [key, lo, hi] of [['entryMs',0,3000],['karaokeSize',.75,2],['karaokeDetail',.75,1.5],['karaokeContrast',.6,1.5]]) out.style[key] = Number.isFinite(out.style[key]) ? Math.max(lo, Math.min(hi, out.style[key])) : d.style[key];
+  if (typeof out.style.karaokeOn !== 'boolean') out.style.karaokeOn = true;
+  out.style.randomGroups = (Array.isArray(out.style.randomGroups) ? out.style.randomGroups : d.style.randomGroups).filter(x => ['faces','colors','backgrounds','animations'].includes(x));
   out.text = typeof p.text === 'string' ? p.text.slice(0, 100000) : '';
   for (const key of ['name', 'intro', 'outro']) out[key] = typeof out[key] === 'string' ? out[key].slice(0, key === 'name' ? 60 : 200) : d[key];
   out.style.faces = (Array.isArray(out.style.faces) ? out.style.faces : []).filter((f) => FACE_NAMES.includes(f));
@@ -149,10 +164,10 @@ export function normalize(p) {
   for (const [key,value] of Object.entries(out.over)) {
     if (!/^(p\d+|\d+\.\d+)$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) continue;
     const o = {};
-    const choices = key.startsWith('p') ? { mood: MOOD_NAMES, exit: Object.keys(EXIT_LABELS) } : { face: FACE_NAMES, col: COLOR_NAMES, fx: Object.keys(APPEAR_LABELS), hold: Object.keys(HOLD_LABELS), pal: [0,4,5] };
+    const choices = key.startsWith('p') ? { mood: MOOD_NAMES, exit: Object.keys(EXIT_LABELS) } : { face: FACE_NAMES, col: COLOR_NAMES, fx: Object.keys(APPEAR_LABELS), mode: ['ascii','normal'], hold: Object.keys(HOLD_LABELS), pal: [0,4,5] };
     for (const [field, values] of Object.entries(choices)) if (values.includes(value[field])) o[field] = value[field];
     if (!key.startsWith('p')) {
-      for (const [field,[lo,hi]] of Object.entries({size:[.5,1.8],thick:[-1,1],ext:[0,2.2]})) if (Number.isFinite(value[field])) o[field] = Math.max(lo,Math.min(hi,value[field]));
+      for (const [field,[lo,hi]] of Object.entries({size:[.5,1.8],thick:[-1,1],ext:[0,2.2],entryMs:[0,3000]})) if (Number.isFinite(value[field])) o[field] = Math.max(lo,Math.min(hi,value[field]));
       for (const field of ['fill','stretch','caps']) if (typeof value[field] === 'boolean') o[field] = value[field];
       if (Array.isArray(value.fxs)) o.fxs = value.fxs.filter((fx) => Object.hasOwn(WORDFX_LABELS,fx));
     }

@@ -1,11 +1,12 @@
 import * as Timing from './words/timing.js';
 import { buildView } from './words/view.js';
+import { Audition } from './words/audition.js';
 // Paso 5: palabra por palabra. Elige una palabra, ajusta CUÁNDO suena (tira de tiempo, botones, teclado o «Aquí»)
 // y cámbiale lo que quieras: animación, tipografía, color, tamaño, grosor, estiramiento y efectos (o déjala en automático).
 import { h, toast, slider, segmented, chips, select } from './ui.js';
-import { phrasesOf, fmtTimeMs, FACE_LABELS, COLOR_NAMES, COLOR_LABELS, APPEAR_LABELS, HOLD_LABELS, EXIT_LABELS, MOOD_LABELS, WORDFX_LABELS } from './project.js';
+import { modelOf, phrasesOf, fmtTimeMs, FACE_LABELS, COLOR_NAMES, COLOR_LABELS, APPEAR_LABELS, HOLD_LABELS, EXIT_LABELS, MOOD_LABELS, WORDFX_LABELS } from './project.js';
 import { WORD_FX } from './director.js';
-import { canStretch, HELD_MIN } from './timeline.js';
+import { buildTimeline, canStretch, HELD_MIN } from './timeline.js';
 
 
 import { HEX, PALKEY, PALBACK, lsGet } from './words/support.js';
@@ -14,7 +15,7 @@ export class WordsPanel {
   constructor(app) {
     this.app = app;
     this.sel = null; // { src, k }
-    this.follow = true;
+    this.follow = false;
     this.hereAt = null;
     this.playOn = lsGet('wordplay', '0') !== '0';
     this._needFit = false;
@@ -28,9 +29,12 @@ export class WordsPanel {
     this._raf = 0;
 
     buildView(this);
+    this.audition = new Audition(this);
+    app.on('editrestored', () => { this.audition.stop(); this.paintAll(); });
 
     app.on('project', () => this.onProject());
     app.on('reset', () => {
+      this._timeline = null;
       clearTimeout(this._t);
       this.sel = null;
       this.paintAll();
@@ -38,7 +42,10 @@ export class WordsPanel {
     app.on('rebuilt', () => this.onRebuilt());
     app.on('tick', () => this.tick());
     app.on('state', () => this.startRaf());
-    app.on('tab', () => { if (app.tab !== 'words') clearTimeout(this._t); this.startRaf(); });
+    app.on('tab', () => { if (app.tab !== 'words') { clearTimeout(this._t); this.strip.cancelGesture(); } this.startRaf(); });
+    app.scope.listen(window, 'blur', () => this.strip.cancelGesture());
+    app.scope.listen(this.el, 'focusin', event => { if (event.target.closest('.tbox, .insp, .audition-settings')) this.setFollow(false); });
+    app.scope.listen(app.panelEl, 'scroll', () => { if (app.tab === 'words') this.el.classList.toggle('condensed', app.panelEl.scrollTop > 60); });
     app.on('clip', () => this.softRefresh(true));
     app.on('media', () => this.softRefresh(true));
     app.scope.listen(window, 'keydown', (e) => this.onKey(e));
@@ -61,9 +68,10 @@ export class WordsPanel {
       .filter((i) => s[i] && Number.isFinite(s[i].t));
   }
   line(src) {
-    const tl = this.app.scene.tl;
+    const tl = this.timeline();
     return tl ? tl.lines.find((l) => l.src === src) || null : null;
   }
+  timeline() { return this._timeline ||= buildTimeline(modelOf(this.app.project, this.app.clip())); }
   key() {
     return this.sel ? this.sel.src + '.' + this.sel.k : null;
   }
@@ -75,6 +83,7 @@ export class WordsPanel {
     return p.over[k] || null;
   }
   setOver(patch) {
+    this.setFollow(false);
     const o = this.getOver(true);
     for (const [k, v] of Object.entries(patch)) {
       if (v === undefined) delete o[k];
@@ -114,6 +123,7 @@ export class WordsPanel {
   }
 
   softRefresh(media) {
+    this._timeline = null;
     if (this.app.tab !== 'words') {
       this._stale = true;
       return;
@@ -122,6 +132,7 @@ export class WordsPanel {
   }
 
   onProject() {
+    this._timeline = null;
     if (this.app.tab !== 'words') {
       this._stale = true;
       return;
@@ -146,6 +157,7 @@ export class WordsPanel {
     const has = this.has();
     this.empty.hidden = has;
     this.top.hidden = !has;
+    this.tools.hidden = !has; this.chipsRow.hidden = !has; this.timeBox.hidden = !has; this.inspectorBox.hidden = !has;
     this.allBox.hidden = !has;
     this.playTog.hidden = !has;
     this.keys.hidden = !has;
@@ -175,7 +187,7 @@ export class WordsPanel {
     }
     const i = list.indexOf(this.sel.src);
     this.phTitle.textContent = `Frase ${this.sel.src + 1} de ${ph.length}`;
-    this.phText.textContent = ph[this.sel.src] ? ph[this.sel.src].text : '';
+    this.phText.textContent = ph[this.sel.src] ? `${ph[this.sel.src].words[this.sel.k]} · ${ph[this.sel.src].text}` : '';
     this.prevPh.disabled = i <= 0;
     this.nextPh.disabled = i < 0 || i >= list.length - 1;
   }
@@ -244,16 +256,14 @@ export class WordsPanel {
   // ───────────── selección ─────────────
   // al tocar un bloque de la tira se elige en seguida (puede ser el inicio de un arrastre), sin mover la vista
   pick(src, k) {
+    this.app.player.pause(); this.audition.stop(); this.setFollow(false);
     this._pickedNew = !this.sel || this.sel.src !== src;
     this.afterSelect(src, k);
     this.refreshStrip();
   }
 
   tapWord() {
-    if (this._pickedNew) {
-      this._pickedNew = false;
-      this.fitPhrase();
-    }
+    this._pickedNew = false;
     if (this.playOn) this.preview();
   }
 
@@ -267,6 +277,7 @@ export class WordsPanel {
   }
 
   select(src, k, { play = true } = {}) {
+    if (play) { this.app.player.pause(); this.audition.stop(); this.setFollow(false); }
     const changedPhrase = !this.sel || this.sel.src !== src;
     this.afterSelect(src, k);
     this.refreshStrip();
@@ -279,21 +290,14 @@ export class WordsPanel {
     if (this.app.destroyed || this.app.tab !== 'words') return;
     const info = this.word();
     if (!info) return;
-    const app = this.app;
-    app.audioFull.pause();
-    this.follow = true;
-    this.syncFollowBtn();
-    app.player.start(Math.max(0, info.w.onset - 0.9));
+    this.audition.play('word');
   }
 
   playPhrase() {
     if (!this.sel) return;
     const line = this.line(this.sel.src);
     if (!line) return;
-    this.app.audioFull.pause();
-    this.follow = true;
-    this.syncFollowBtn();
-    this.app.player.start(Math.max(0, line.t - 0.6));
+    this.audition.play('phrase');
   }
 
   gotoPhrase(dir) {
@@ -324,7 +328,7 @@ export class WordsPanel {
 
   // ───────────── tira ─────────────
   stripWords() {
-    const tl = this.app.scene.tl;
+    const tl = this.timeline();
     if (!tl) return [];
     const over = this.app.project.over;
     const out = [];
@@ -356,7 +360,7 @@ export class WordsPanel {
     const a = line.t - 0.5;
     const b = Math.min(end, line.t + 14) + 0.3;
     this.strip.showRange(a, Math.max(b, a + 2.4));
-    this.follow = true;
+    this.follow = false;
     this.syncFollowBtn();
     return true;
   }
@@ -532,6 +536,12 @@ export class WordsPanel {
     };
 
     const sApp = select(opt(APPEAR_LABELS, 'Automática'), o.fx || '', (v) => this.setOver({ fx: v || undefined }), 'Entrada');
+    sApp.options[0].textContent = 'Heredar global';
+    const sMode = select([['','Heredar global'],['ascii','ASCII'],['normal','Texto normal']], o.mode || '', v => this.setOver({ mode: v || undefined }), 'Modo de esta palabra');
+    const entryTime = h('input', { type: 'number', min: 0, max: 3000, step: 10, value: o.entryMs ?? '', placeholder: 'Heredar global', 'aria-label': 'Entrada de esta palabra en milisegundos', onchange: e => {
+      if (e.target.value === '') this.setOver({ entryMs: undefined });
+      else if (Number.isFinite(e.target.valueAsNumber)) this.setOver({ entryMs: Math.max(0, Math.min(3000, e.target.valueAsNumber)) });
+    } });
     const sHold = select(opt(HOLD_LABELS, 'Automático'), o.hold || '', (v) => this.setOver({ hold: v || undefined }), 'Mientras suena');
     const sFace = select(opt(FACE_LABELS, 'Automática'), o.face || '', (v) => this.setOver({ face: v || undefined }), 'Tipografía');
     const col = h(
@@ -628,6 +638,8 @@ export class WordsPanel {
     insp.replaceChildren(
       h('div', { class: 'wtitle' }, h('b', {}, text), h('span', { class: 'muted small' }, 'cómo se ve · frase ' + (this.sel.src + 1))),
       mk('Cómo entra', sApp, 'appear'),
+      mk('Entrada · milisegundos (vacío = global)', entryTime),
+      mk('ASCII o texto normal', sMode),
       mk('Mientras suena', sHold, 'hold'),
       mk('Tipografía', sFace, 'face'),
       mk('Color', col),
@@ -646,6 +658,7 @@ export class WordsPanel {
   }
 
   setPhrase(patch) {
+    this.setFollow(false);
     const p = this.app.project;
     const k = 'p' + this.sel.src;
     p.over[k] = p.over[k] || {};
@@ -664,12 +677,12 @@ export class WordsPanel {
     if (!info) return;
     const w = info.w;
     const set = (n, t) => H[n] && (H[n].textContent = t ? ' · ahora: ' + t : '');
-    set('appear', APPEAR_LABELS[w.appear] || w.appear);
+    set('appear', `${APPEAR_LABELS[w.appear] || w.appear} · ${Math.round(w.appearDur * 1000)} ms${w.entryLimited ? ' (limitada para poder leer)' : ''}`);
     set('hold', HOLD_LABELS[w.hold] || w.hold);
     set('face', FACE_LABELS[w.face] || w.face);
     set('stretch', w.stretch ? 'se estira' : 'normal');
     set('fx', (w.fxs || []).length ? w.fxs.map((f) => WORDFX_LABELS[f]).join(', ') : 'ninguno');
   }
-  destroy() { clearTimeout(this._t); cancelAnimationFrame(this._raf); this.strip.destroy?.(); }
+  destroy() { this.audition.stop(); clearTimeout(this._t); cancelAnimationFrame(this._raf); this.strip.destroy?.(); }
 
 }

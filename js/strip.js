@@ -31,12 +31,14 @@ export class TimeStrip {
     this.head = h('div', { class: 'sph', 'aria-hidden': 'true' });
     this.tip = h('div', { class: 'stip', hidden: true, 'aria-hidden': 'true' });
     this.msg = h('div', { class: 'smsg', hidden: true });
+    this.rangeEl = h('div', { class: 'audition-range', hidden: true, 'aria-hidden': 'true' });
     this.el = h('div', { class: 'strip', role: 'group', 'aria-label': 'Tira de tiempo: arrastra las palabras para cambiar cuándo suenan' }, this.cv, this.layer, this.head, this.tip, this.msg);
+    this.el.prepend(this.rangeEl);
     this.el.addEventListener('pointerdown', (e) => this.down(e));
     this.el.addEventListener('pointermove', (e) => this.move(e));
     this.el.addEventListener('pointerup', (e) => this.up(e));
     this.el.addEventListener('pointercancel', (e) => this.up(e, true));
-    this.el.addEventListener('lostpointercapture', (e) => this.pointers.delete(e.pointerId));
+    this.el.addEventListener('lostpointercapture', (e) => this.up(e, true));
     this.el.addEventListener(
       'wheel',
       (e) => {
@@ -122,10 +124,24 @@ export class TimeStrip {
   }
 
   setPlayhead(t) {
+    this.ph = t;
     const x = this.tx(t);
     const vis = x >= -2 && x <= this.W + 2;
     this.head.style.transform = `translateX(${x.toFixed(1)}px)`;
     this.head.classList.toggle('off', !vis);
+  }
+
+  setRange(range) { this.range = range; this.layout(); }
+  magnet(value, src, k) {
+    if (!this.snap) return value;
+    const points = [this.ph, Math.round(value * 10) / 10, ...this.words.filter(w => w.src !== src || w.k !== k).map(w => w.on)];
+    const nearest = points.reduce((a, b) => Math.abs(b - value) < Math.abs(a - value) ? b : a, value + .036);
+    return Math.abs(nearest - value) <= .035 ? nearest : value;
+  }
+  cancelGesture() {
+    const d = this.drag;
+    if (d?.w) { d.w.on = d.on0; d.w.len = d.len0; d.w.held = d.held0; }
+    this.drag = null; this.pinch = null; this.pointers.clear(); this.hideTip(); this.layout();
   }
 
   // coloca los bloques (reutilizando los que ya existen) y vuelve a dibujar la onda
@@ -133,6 +149,8 @@ export class TimeStrip {
     const W = this.W;
     if (!W) return;
     const sel = this.sel;
+    this.rangeEl.hidden = !this.range;
+    if (this.range) { const a = Math.max(0, this.tx(this.range.a)), b = Math.min(W, this.tx(this.range.b)); this.rangeEl.style.left = a + 'px'; this.rangeEl.style.width = Math.max(0, b - a) + 'px'; }
     const seen = new Set();
     for (const w of this.words) {
       const x0 = this.tx(w.on);
@@ -142,7 +160,7 @@ export class TimeStrip {
       seen.add(key);
       let b = this.blocks.get(key);
       if (!b) {
-        b = h('div', { class: 'sb', 'data-src': w.src, 'data-k': w.k }, h('span', { class: 'sbt' }, w.text), h('i', { class: 'sbr', title: 'Estirar o acortar' }));
+        b = h('div', { class: 'sb', tabindex: '0', role: 'button', 'aria-label': 'Seleccionar ' + w.text, 'data-src': w.src, 'data-k': w.k, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); this.cb.onPick?.(w.src, w.k); } } }, h('span', { class: 'sbt' }, w.text), h('i', { class: 'sbr', title: 'Estirar o acortar' }));
         b._txt = w.text;
         this.blocks.set(key, b);
         this.layer.append(b);
@@ -259,6 +277,7 @@ export class TimeStrip {
     } catch (err) {}
     if (this.pointers.size === 2) {
       // dos dedos: acercar / alejar
+      if (this.drag?.w) { this.drag.w.on = this.drag.on0; this.drag.w.len = this.drag.len0; this.layout(); }
       this.drag = null;
       const [p, q] = [...this.pointers.values()];
       const d = Math.hypot(p.x - q.x, p.y - q.y) || 1;
@@ -304,7 +323,7 @@ export class TimeStrip {
       return;
     }
     const dxPx = x - d.x0;
-    if (!d.moved && Math.abs(dxPx) < 4) return;
+    if (!d.moved && Math.abs(dxPx) < (e.pointerType === 'touch' ? 9 : 4)) return;
     d.moved = true;
     const dt = dxPx / (this.W / this.span);
     if (d.kind === 'view') {
@@ -314,7 +333,7 @@ export class TimeStrip {
     }
     const lim = (this.cb.limits && this.cb.limits(d.src, d.k)) || { lo: 0, hi: this.dur };
     if (d.kind === 'move') {
-      let on = Math.round((d.on0 + dt) * 100) / 100;
+      let on = Math.round(this.magnet(d.on0 + dt, d.src, d.k) * 1000) / 1000;
       // no pasa al vecino de atrás; una palabra larga tampoco puede pasar encima de la siguiente, una corta se acorta para caber
       const held = !!d.held0;
       const top = Number.isFinite(lim.hi) ? lim.hi - MIN_GAP - (held ? d.len0 : MIN_LEN) : Infinity;
@@ -327,7 +346,7 @@ export class TimeStrip {
       this.showTip(d.blk, `${fmtTime2(on + this.clip0)}  (${on - d.on0 >= 0 ? '+' : ''}${(on - d.on0).toFixed(2)} s)`);
       this.cb.onMove && this.cb.onMove(d.src, d.k, on, false);
     } else {
-      let len = Math.round((d.len0 + dt) * 100) / 100;
+      let len = Math.round((this.magnet(d.w.on + d.len0 + dt, d.src, d.k) - d.w.on) * 1000) / 1000;
       len = Math.max(MIN_LEN, Math.min(8, len));
       // no pasar de donde empieza la palabra que sigue
       if (Number.isFinite(lim.hi)) len = Math.max(MIN_LEN, Math.min(len, lim.hi - MIN_GAP - d.w.on));
@@ -349,6 +368,7 @@ export class TimeStrip {
     this.drag = null;
     this.hideTip();
     if (cancelled) {
+      if (d.w) { d.w.on = d.on0; d.w.len = d.len0; d.w.held = d.held0; }
       this.layout();
       return;
     }
@@ -381,7 +401,7 @@ export class TimeStrip {
   hideTip() {
     this.tip.hidden = true;
   }
-  destroy() { this.resizeObserver?.disconnect(); }
+  destroy() { this.cancelGesture(); this.resizeObserver?.disconnect(); }
 }
 
 // 1:07.35

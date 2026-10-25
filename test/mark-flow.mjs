@@ -227,7 +227,7 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   ok(!pv2.th && pv2.st !== 'playing' && pv2.t < 0.3 && pv2.ph === 'done', 'al cerrar la vista previa: se detiene, vuelve al principio y a «¿Quedó bien?»');
   await pg.click('.mcard.done .btn.alt');
   await pg.waitForTimeout(400);
-  ok((await pg.evaluate(() => window.__app.tab)) === 'style', '«Siguiente» lleva al paso de Estilo');
+  ok((await pg.evaluate(() => window.__app.tab)) === 'words', '«Siguiente» lleva al paso de Ajustar');
   await ctx.close();
 }
 

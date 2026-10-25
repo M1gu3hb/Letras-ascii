@@ -51,6 +51,7 @@ export class Player {
 
   // url: audio del tramo (WAV o el original); sin url = reloj virtual de `dur` segundos
   setSource(url, dur) {
+    this.auditionRange = null;
     this.playEpoch = (this.playEpoch || 0) + 1;
     const a = this.audio;
     this.dur = dur;
@@ -134,6 +135,7 @@ export class Player {
   }
   resume() {
     if (this.destroyed) return;
+    if (this.auditionRange && (this.t >= this.auditionRange.b || this.t < this.auditionRange.a)) this.seek(this.auditionRange.a);
     this.setState('playing');
     this.resumeClock();
   }
@@ -160,6 +162,7 @@ export class Player {
   setRate(r) {
     this.rate = r;
     if (!this.virtual) this.audio.playbackRate = r;
+    this.audio.preservesPitch = true;
   }
 
   finish() {
@@ -222,6 +225,11 @@ export class Player {
   // reloj: actualiza `t`, detecta el final del tramo y baja el volumen al terminar. Devuelve el tiempo.
   clock(now) {
     let t = this.time(now);
+    const range = this.auditionRange;
+    if (this.state === 'playing' && range && t >= range.b) {
+      if (range.loop) { this.seek(range.a); t = range.a; }
+      else { this.pause(); this.seek(range.b); t = range.b; }
+    }
     if (this.state === 'playing' && this.dur && t >= this.dur - 0.01) {
       this.finish();
       t = this.dur;

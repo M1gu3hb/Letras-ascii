@@ -3,7 +3,7 @@ import { fmtTimeMs } from '../project.js';
 
 import { GAP, r3 } from './support.js';
 export function limitsClip(self, src, k) {
-    const tl = self.app.scene.tl;
+    const tl = self.timeline();
     const dur = self.app.clip().end - self.app.clip().start;
     if (!tl) return { lo: 0, hi: dur };
     const flat = [];
@@ -13,7 +13,7 @@ export function limitsClip(self, src, k) {
 }
 
 export function absNow(self) {
-    return self.app.clip().start + self.app.player.time(performance.now() / 1000);
+    return self.app.clip().start + self.app.player.time(performance.now() / 1000) - (self.app.project.offset || 0);
 }
 
 export function paintTimeBox(self) {
@@ -40,6 +40,8 @@ export function paintTimeInfo(self) {
       const len = info.w.sung || 0;
       self.dInfo.textContent = `${len.toFixed(2)} s · ${info.w.held ? 'larga: se estira' : 'corta'}`;
     } else self.dInfo.textContent = 'automática (la reparto por sílabas)';
+    if (self.startInput && document.activeElement !== self.startInput) self.startInput.value = abs.toFixed(3);
+    if (self.lengthInput && document.activeElement !== self.lengthInput) self.lengthInput.value = Math.max(.05, info.w.sung || info.w.dur).toFixed(3);
 }
 
 export function ensureWordLevel(self, src) {
@@ -92,7 +94,7 @@ export function limitsAbs(self, src, k, s) {
         }
       }
     }
-    return { lo: Math.max(0, lo), hi };
+    return { lo: Math.max(0, lo), hi: Math.min(hi, self.app.media?.dur ?? self.app.clip().end) };
 }
 
 export function normalizeLens(self, src) {
@@ -222,6 +224,7 @@ export function hereRelease(self) {
 }
 
 export function afterTime(self, src, k, replay = true) {
+    self.setFollow(false);
     const app = self.app;
     const s = app.project.sync[src];
     const clip0 = app.clip().start;
@@ -260,5 +263,6 @@ export function afterTime(self, src, k, replay = true) {
       if (s && s.wt) self.dInfo.textContent = `${(sw || 0).toFixed(2)} s · ${(sw || 0) >= self.holdMin() ? 'larga: se estira' : 'corta'}`;
     }
     clearTimeout(self._t);
+    self.audition?.refresh();
     if (replay && self.playOn && !self.hereAt) self._t = setTimeout(() => !app.destroyed && app.tab === 'words' && self.sel && self.preview(), 420);
 }

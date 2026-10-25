@@ -34,6 +34,6 @@ jobs:
       - run: npm ci
       - run: npx playwright-core install --with-deps webkit
       - run: npm run build
-      - run: timeout --kill-after=10s 240s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture
+      - run: timeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading
         env:
           PLAYWRIGHT_BROWSER: webkit

@@ -1,6 +1,7 @@
 import { h, segmented, toggle } from '../ui.js';
 import { TimeStrip } from '../strip.js';
 import { holdRepeat, lsSet } from './support.js';
+import { adjustmentTools } from './controls.js';
 export function buildView(panel) {
  const app = panel.app;
     panel.empty = h(
@@ -24,6 +25,7 @@ export function buildView(panel) {
       onMove: (src, k, on, final) => final && panel.setStartClip(src, k, on),
       onSize: (src, k, len, final) => final && panel.setLen(src, k, len),
       onSeek: (t) => {
+        panel.audition.stop();
         panel.follow = false;
         panel.syncFollowBtn();
         app.audioFull.pause();
@@ -43,8 +45,8 @@ export function buildView(panel) {
     panel.zoomRow = h(
       'div',
       { class: 'zoomrow' },
-      zb('−', 'Alejar la tira', () => panel.strip.zoom(1.4)),
-      zb('+', 'Acercar la tira', () => panel.strip.zoom(0.7)),
+      zb('−', 'Alejar la tira', () => panel.strip.zoom(1.4, panel.word()?.w.onset ?? app.player.t)),
+      zb('+', 'Acercar la tira', () => panel.strip.zoom(0.7, panel.word()?.w.onset ?? app.player.t)),
       zb('Frase', 'Ver la frase completa', () => panel.fitPhrase()),
       zb('Palabra', 'Acercar a la palabra elegida', () => panel.fitWord()),
       panel.followBtn,
@@ -76,7 +78,7 @@ export function buildView(panel) {
       'div',
       { class: 'trow2' },
       h('div', { class: 'tl' }, h('b', {}, 'Dura'), panel.dInfo),
-      h('div', { class: 'tbs' }, nb('− 0.25', 'Acortar 0.25 segundos', () => panel.nudgeLen(-0.25)), nb('− 0.05', 'Acortar 0.05 segundos', () => panel.nudgeLen(-0.05)), nb('+ 0.05', 'Alargar 0.05 segundos', () => panel.nudgeLen(0.05)), nb('+ 0.25', 'Alargar 0.25 segundos', () => panel.nudgeLen(0.25))),
+      h('div', { class: 'tbs' }, nb('− 0.1', 'Acortar 0.1 segundos', () => panel.nudgeLen(-0.1)), nb('− 0.02', 'Acortar 0.02 segundos', () => panel.nudgeLen(-0.02)), nb('+ 0.02', 'Alargar 0.02 segundos', () => panel.nudgeLen(0.02)), nb('+ 0.1', 'Alargar 0.1 segundos', () => panel.nudgeLen(0.1))),
       panel.longSeg,
     );
     const phrRow = h(
@@ -103,14 +105,12 @@ export function buildView(panel) {
       }
     });
     panel.hereBtn.addEventListener('keyup', (e) => (e.key === 'Enter' || e.key === ' ') && panel.hereRelease());
-    const hearWord = h('button', { class: 'btn', type: 'button', onclick: () => panel.preview() }, '▶ Escuchar palabra');
-    const hearPhrase = h('button', { class: 'btn', type: 'button', onclick: () => panel.playPhrase() }, '▶ Escuchar frase');
     const redoPhrase = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
       if (!panel.sel || !confirm('¿Volver a marcar esta frase? Las otras frases se conservan.')) return;
       const src = panel.sel.src;
       app.selectTab('mark'); app.panels.mark.jump(src, true);
     } }, 'Volver a marcar esta frase');
-    panel.hereRow = h('div', { class: 'row wrap here-row' }, panel.hereBtn, hearWord, hearPhrase, redoPhrase);
+    panel.hereRow = h('div', { class: 'row wrap here-row' }, panel.hereBtn, redoPhrase);
     panel.timeBox = h('div', { class: 'tbox' }, panel.hereRow, startRow, durRow, phrRow);
 
     // estilo de la palabra
@@ -146,8 +146,13 @@ export function buildView(panel) {
       ),
     );
 
-    panel.top = h('div', { class: 'wtop' }, panel.nav, panel.strip.el, panel.zoomRow, panel.chipsRow, panel.timeBox);
-    panel.el = h('div', { class: 'pane wordspane' }, h('h2', {}, 'Palabra por palabra'), panel.empty, panel.top, panel.insp, panel.allBox, panel.playTog, panel.keys);
+    const tools = adjustmentTools(panel);
+    panel.timeBox.prepend(panel.precision);
+    panel.zoomRow.append(zb('Tramo', 'Ver todo el tramo', () => { panel.setFollow(false); panel.strip.showRange(0, app.player.dur); }));
+    panel.top = h('div', { class: 'wtop' }, panel.nav, panel.strip.el, panel.zoomRow);
+    panel.tools = tools;
+    panel.inspectorBox = h('details', { class: 'adjust-inspector', open: true }, h('summary', {}, 'Aspecto de la palabra'), panel.insp);
+    panel.el = h('div', { class: 'pane wordspane' }, h('h2', {}, 'Ajustar letra'), panel.empty, panel.top, tools, panel.chipsRow, panel.timeBox, panel.inspectorBox, panel.allBox, panel.playTog, panel.keys);
 
 
 }

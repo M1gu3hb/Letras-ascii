@@ -134,6 +134,7 @@ export function select(options, value, onChange, label) {
   for (const [v, text] of options) s.append(h('option', { value: v }, text));
   s.value = value;
   s.addEventListener('change', () => onChange(s.value));
+  s.set = value => { s.value = value; };
   return s;
 }
 
