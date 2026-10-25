@@ -281,7 +281,7 @@ export class App {
     this.previewToggle.setAttribute('aria-expanded', String(open));
     this.previewToggle.setAttribute('aria-label', open ? 'Ocultar vista previa' : 'Mostrar vista previa');
     this.previewToggle.classList.toggle('on', open);
-    if (this.scene) requestAnimationFrame(() => { if (!this.destroyed) { this.scene.resize(); this.syncDemo(); } });
+    if (this.scene) requestAnimationFrame(() => { if (!this.destroyed) { if (open && this.needRebuild && !this.stageHidden()) this.rebuild(); this.scene.resize(); this.syncDemo(); } });
   }
 
   toggleMore(force) {

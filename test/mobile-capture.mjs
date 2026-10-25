@@ -73,7 +73,10 @@ try{
  check(true,'a rejected countdown unlock recovers on one direct Resume touch without repeating the countdown');await close(recovery.page,recovery.context);
  const {page,context}=await open(390,700);await page.locator('#tab-style').tap();
  await page.getByRole('button',{name:'Ocultar vista previa',exact:true}).tap();check(!(await page.locator('.stagefs').isVisible()),'preview can be collapsed to work on controls');
+ await page.getByRole('button',{name:'Grueso',exact:true}).tap();await page.waitForFunction(()=>window.__app.needRebuild);
  await page.getByRole('button',{name:'Mostrar vista previa',exact:true}).tap();check(await page.locator('.stagefs').isVisible(),'preview can be restored without removing controls');
+ await page.waitForFunction(()=>!window.__app.needRebuild&&window.__app.scene.thickG===window.__app.project.style.thick);
+ check(true,'reopening the preview renders edits made while it was collapsed');
  await page.getByRole('button',{name:'Más controles',exact:true}).tap();check(await page.getByLabel('Forma de la pantalla').isVisible()&&await page.getByLabel('Velocidad',{exact:true}).isVisible(),'format and playback speed remain available on phone');await close(page,context);
  assert.deepEqual(errors,[]);console.log(`${count} mobile capture checks passed (${kind})`);
 }finally{await browser.close();srv.close()}
