@@ -35,6 +35,13 @@ async function setup(cfg, { marked = true } = {}) {
   await pg.waitForTimeout(700);
   const preview = pg.getByRole('button', { name: 'Mostrar vista previa', exact: true });
   if (await preview.isVisible()) await preview.tap();
+  // Abrir Vista agenda el ajuste del lienzo en el siguiente frame. La referencia
+  // debe medir ese escenario visible, no el tamaño previo a desplegarlo.
+  await pg.waitForFunction(() => {
+    const a = window.__app;
+    const host = a.canvas.parentElement;
+    return host.clientWidth > 0 && a.scene.r.W === host.clientWidth && a.scene.r.H === host.clientHeight && !a.needRebuild;
+  });
   return { ctx, pg };
 }
 const state = (pg) =>
