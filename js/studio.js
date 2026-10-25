@@ -487,12 +487,12 @@ export class App {
   // vitrina: mientras no suena nada, el escenario se mueve solo (con un bombo de mentiras); al darle ▶ manda la canción
   syncDemo() {
     if (!this.player || !this.scene) return;
-    const k = this.kind;
+    const k = this.previewKind();
     // con tu canción ya marcada, en «Estilo» el escenario repite el arranque sin sonido (con los graves reales)
     // para que veas cada cambio al mover un control; con ▶ suena de verdad
     // (lo mismo en la pantalla completa: se ve vivo desde que se abre, hasta que le des ▶)
     const peek = false; // Paused means paused; styling never advances the real song silently.
-    const want = (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
+    const want = !this.stageHidden() && (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
     const tl = this.scene.tl;
     let len = tl && tl.lines.length ? Math.min(Math.max(this.player.dur || 30, 6), tl.lastHide + 1.6) : 8;
     let from = 0;

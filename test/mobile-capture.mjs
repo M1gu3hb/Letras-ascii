@@ -53,7 +53,12 @@ try{
   check(await page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3),`${width}×${height} ${fmt}: three actual touches save three phrases`);
   if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await page.waitForFunction(()=>!window.__app.panels.mark.locked());
  }
- if(matrix)await close(matrix.page,matrix.context);
+ if(matrix){
+  await matrix.page.setViewportSize({width:390,height:700});await matrix.page.reload();await matrix.page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
+  await matrix.page.locator('#tab-words').tap();await matrix.page.waitForTimeout(300);
+  check(await matrix.page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3&&!window.__app.player.demo),'restored marked lyrics stay paused when the phone preview is collapsed');
+  await close(matrix.page,matrix.context);
+ }
  for(const mode of ['phrase','word']){
   const {page,context}=await open(390,700,true);await fill(page,'tall');
   await openMarkOptions(page);if(mode==='word')await page.getByRole('button',{name:'Palabra por palabra',exact:true}).tap();
