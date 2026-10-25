@@ -30,7 +30,9 @@ try{
   const {page,context}=await open(width,height);await fill(page,fmt);
   check(await page.locator('.mcard.idle .primary').isVisible(),`${width}×${height} ${fmt}: Start is available`);
   await openMarkOptions(page);await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap();
-  await page.locator('.mcard.idle .primary').tap();await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused);
+  await page.locator('.mcard.idle .primary').tap();
+  try {await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused)}
+  catch(error){console.log('mobile start diagnostic',await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,reason:m.reason,countOn:m.countOn,player:a.player.state,paused:a.audio.paused,ready:a.audio.readyState,src:a.audio.currentSrc,error:a.audio.error?.message,tab:a.tab,active:document.activeElement?.outerHTML.slice(0,250),button:m.startBtn.getBoundingClientRect().toJSON(),panel:a.panelEl.getBoundingClientRect().toJSON(),scroll:m.el.scrollTop}}));throw error}
   const area=await hitArea(page);check(area.hidden&&area.inside&&area.hit&&area.h>=140,`${width}×${height} ${fmt}: the capture pad is visible, unobstructed and owns the workspace ${JSON.stringify(area)}`);
   await page.locator('.pad').tap();await page.waitForTimeout(360);
   const first=await page.locator('.pad').boundingBox();await page.getByRole('button',{name:'Pausar',exact:true}).tap();await page.waitForTimeout(500);
