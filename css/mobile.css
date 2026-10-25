@@ -15,6 +15,12 @@
 }
 .preview-toggle, .mopts-toggle { display: none; }
 
+@media (max-height: 520px) {
+  /* En poco alto, el panel completo se desplaza: el dock no consume el área de edición. */
+  .studio[data-tab='words'] .wordspane .wtop { position: static; }
+  .studio[data-tab='words'] .panel { scroll-padding-block-start: 12px; }
+}
+
 @media (max-width: 899px), (max-aspect-ratio: 1/1), (max-height: 520px) {
   .studio[data-tab='mark'][data-fmt] .left { display: none; }
   .studio[data-tab='mark'][data-fmt] .grid {

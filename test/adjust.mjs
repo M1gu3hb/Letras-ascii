@@ -6,8 +6,8 @@ mkdirSync('test/audit/timeline',{recursive:true});
 const {srv,port}=serve('site'),browser=await launch(),errors=[];let checks=0;
 const check=(value,message)=>{assert.ok(value,message);console.log('ok',++checks,message)};
 try{
- for(const [width,height] of [[320,568],[390,700],[1440,900]]){
-  const touch=width<600,context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch});
+ for(const [width,height] of [[320,568],[360,640],[390,700],[430,932],[844,390],[768,1024],[1024,768],[1366,768],[1440,900]]){
+  const touch=width<=1024,context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch});
   const page=await context.newPage();watch(page,errors);page.setDefaultTimeout(12000);
   await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>window.__app);
   await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);

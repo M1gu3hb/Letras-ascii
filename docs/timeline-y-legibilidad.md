@@ -52,7 +52,7 @@ Los proyectos nuevos usan principal ASCII, karaoke normal y entrada rápida de 8
 5. Dar presencia a variantes, proteger manuales y revisar navegación, targets y pantallas pequeñas.
 6. Ejecutar regresiones completas e inspección visual; publicar solo el SHA concreto validado.
 
-Las nuevas pruebas unitarias cubren ventanas rápidas en ambas composiciones, cero global/por palabra, normalización, importación, determinismo y grupos de azar. `adjust` ejercita selección nativa, A–B, 100 ms exactos con clip 12/offset -120 ms, cancelación de gestos, duración, historial agrupado, velocidad y generación reversible en 320, 390 y 1440 px. `reading` compara píxeles con/sin cada palabra en las cuatro combinaciones de modos y ambos focos, valida geometría en nueve tamaños, descarga HTML real, lo reproduce sin recursos externos, reimporta y recupera desde IndexedDB.
+Las nuevas pruebas unitarias cubren ventanas rápidas en ambas composiciones, cero global/por palabra, normalización, importación, determinismo y grupos de azar. `adjust` ejercita selección nativa, A–B, 100 ms exactos con clip 12/offset -120 ms, cancelación de gestos, duración, historial agrupado, velocidad y generación reversible en los nueve tamaños exigidos. `reading` compara píxeles con/sin cada palabra en las cuatro combinaciones de modos y ambos focos, valida geometría en nueve tamaños, descarga HTML real, lo reproduce sin recursos externos, reimporta y recupera desde IndexedDB.
 
 ```sh
 export PLAYWRIGHT_EXECUTABLE_PATH=/usr/bin/chromium
@@ -73,11 +73,11 @@ Implementación principal: `4526430`; esta rama incorpora las correcciones poste
 |---|---|
 | Batería completa `npm test` con `PLAYWRIGHT_EXECUTABLE_PATH` | Aprobada: lint, build, 25 unitarias de ese punto y las 15 suites de navegador. |
 | Cierre tras los ajustes finales | Lint, build y 29 unitarias aprobados; repeticiones dirigidas de Ajustar, lectura/exportación y Palabras aprobadas. |
-| Ajustar | 34 comprobaciones; toque, mouse y teclado; 320×568, 390×700 y 1440×900. Incluye seleccionar otra frase sin recentrar, reanudar al final de A–B y volver a sus controles después de editar campos. |
+| Ajustar | 101 comprobaciones; toque, mouse y teclado en los nueve tamaños exigidos (320×568, 360×640, 390×700, 430×932, 844×390, 768×1024, 1024×768, 1366×768 y 1440×900). Incluye seleccionar otra frase sin recentrar, reanudar al final de A–B y volver a sus controles después de editar campos. |
 | Lectura/exportación | 38 comprobaciones; cuatro combinaciones de render, dos focos, nueve tamaños, siete familias, reduced motion y recorrido de descarga/reproducción/reimportación/recarga. |
 | Captura móvil existente | 107 comprobaciones aprobadas en Chromium; cinco tamaños y tres formatos, con toques nativos. |
 | UX existente | Matriz de 14 tamaños aprobada. |
-| WebKit | Job de GitHub Actions aprobado para el PR principal: smoke, reliability, reaudit, mobile-capture, adjust y reading. No se instaló WebKit en la máquina local. |
+| WebKit | Job de GitHub Actions aprobado para el PR principal: smoke, reliability, reaudit, mobile-capture, adjust y reading. Se ejecuta en CI; la máquina local usa Chromium. |
 | No ejecutado | Teléfonos físicos/teclado virtual; tres fixtures condicionales AAC/Opus/MP3 que no estaban disponibles. |
 
 Las últimas regresiones cubren también una elección manual de fuente/color en la última palabra: una heurística de rima podía reemplazarla, y ahora la decisión manual vuelve a aplicarse después de la heurística.
@@ -97,7 +97,7 @@ El [HTML autónomo reproducido](images/timeline/exported-karaoke.png) incluye fu
 
 ## Publicación
 
-La implementación principal se integró mediante el [PR #4](https://github.com/M1gu3hb/Letras-ascii/pull/4), commit `aee9c1701b1ae10a0b7db99b14ce967baec628b4`, con ambos jobs de GitHub Actions aprobados. Vercel informó despliegue completado para ese SHA en el proyecto existente. La prueba pública marcó tres frases con toques nativos y corrigió inicio/duración, pero encontró que la tira fija podía cubrir A–B al volver desde los campos. La corrección posterior, en `codex/adjust-scroll-visibility`, mide el dock y reserva ese espacio mediante scroll-padding; también evita oscilaciones al entrar/salir del modo compacto. Su regresión toca los controles después de editar, sin forzar eventos ni ocultar la tira.
+La implementación principal se integró mediante el [PR #4](https://github.com/M1gu3hb/Letras-ascii/pull/4), commit `aee9c1701b1ae10a0b7db99b14ce967baec628b4`, con ambos jobs de GitHub Actions aprobados. Vercel informó despliegue completado para ese SHA en el proyecto existente. La prueba pública marcó tres frases con toques nativos y corrigió inicio/duración, pero encontró que la tira fija podía cubrir A–B al volver desde los campos. El [PR #5](https://github.com/M1gu3hb/Letras-ascii/pull/5), en `codex/adjust-scroll-visibility`, mide el dock y reserva ese espacio mediante scroll-padding; también evita oscilaciones al entrar/salir del modo compacto. En pantallas de hasta 520 px de alto, el dock se desplaza junto con el panel para dejar disponibles los controles. Su regresión toca los controles después de editar, sin forzar eventos.
 
 Mantener el proyecto Vercel `letras-ascii`, build `node build.mjs` y salida `site/`. No editar bundles generados ni crear un segundo proyecto.
 

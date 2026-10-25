@@ -1,7 +1,7 @@
 import * as Timing from './words/timing.js';
 import { buildView } from './words/view.js';
 import { Audition } from './words/audition.js';
-// Paso 5: palabra por palabra. Elige una palabra, ajusta CUÁNDO suena (tira de tiempo, botones, teclado o «Aquí»)
+// Paso 4: Ajustar. Elige una palabra, ajusta CUÁNDO suena (tira de tiempo, botones, teclado o «Aquí»)
 // y cámbiale lo que quieras: animación, tipografía, color, tamaño, grosor, estiramiento y efectos (o déjala en automático).
 import { h, toast, slider, segmented, chips, select } from './ui.js';
 import { modelOf, phrasesOf, fmtTimeMs, FACE_LABELS, COLOR_NAMES, COLOR_LABELS, APPEAR_LABELS, HOLD_LABELS, EXIT_LABELS, MOOD_LABELS, WORDFX_LABELS } from './project.js';
@@ -122,9 +122,8 @@ export class WordsPanel {
     if (list.length && (!this.sel || !list.includes(this.sel.src))) this.sel = { src: list[0], k: 0 };
     this._stale = false;
     this.paintAll();
-    // si el escenario todavía va a rehacerse (cambió de vista), se ajusta cuando termine para no usar tiempos viejos
-    this._needFit = true;
-    if (this.app.previewKind() === this.app.kind) this._needFit = !this.fitPhrase();
+    // El timeline de edición está actualizado aunque la previsualización esté oculta.
+    this._needFit = !this.fitPhrase();
     this.startRaf();
     this.syncScrollPadding();
   }
@@ -400,6 +399,7 @@ export class WordsPanel {
   }
 
   setFollow(v) {
+    if (!v) this._needFit = false;
     this.follow = v;
     this.syncFollowBtn();
   }
