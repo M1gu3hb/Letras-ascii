@@ -16,7 +16,8 @@ try {
  await page.goto(`http://localhost:${port}/`);await waitReady();
  await page.setInputFiles('#songfile','test/media/kick120.wav');
  await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController,null,{timeout:30000});
- console.log('recovery setup',await page.evaluate(async()=>{const a=window.__app,s=await import('/reaudit-store.js');let retry;try{await s.putFile(a.id,a.file,a.file.name,a.file.type,a.project.song.mediaId);retry='ok'}catch(e){retry=e.name+': '+e.message}const r=await s.getFile(a.id);return {retry,song:a.project.song,file:r?{size:r.blob?.size,mediaId:r.mediaId}:null}}));
+ const persisted=await page.evaluate(async()=>{const a=window.__app,s=await import('/reaudit-store.js'),r=await s.getFile(a.id);return !!r?.blob&&r.blob.size===a.file.size&&r.mediaId===a.project.song.mediaId});
+ check(persisted,'loaded audio is actually persisted with its matching media identity');
  const cancelled=await page.evaluate(async()=>{
   const a=window.__app,old=a.media;await a.save();const busy=a.busy;let inert=false;
   a.busy=function(...args){busy.apply(this,args);if(args[0]?.startsWith('Recuperando')){inert=this.top.inert&&this.grid.inert;this.cancelLoad()}};
