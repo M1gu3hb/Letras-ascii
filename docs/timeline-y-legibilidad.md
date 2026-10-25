@@ -67,12 +67,12 @@ El runner completo incluye ahora 15 suites. El job WebKit de CI incluye `adjust`
 
 ## Resultado de la validación local
 
-Commit funcional: `4526430`. Node 24.19.0, Playwright Core 1.64.1 y Chromium del sistema 154.0.8037.57, en Linux.
+Implementación principal: `4526430`; esta rama incorpora las correcciones posteriores descritas abajo. Node 24.19.0, Playwright Core 1.64.1 y Chromium del sistema 154.0.8037.57, en Linux.
 
 | Comprobación | Resultado |
 |---|---|
 | Batería completa `npm test` con `PLAYWRIGHT_EXECUTABLE_PATH` | Aprobada: lint, build, 25 unitarias de ese punto y las 15 suites de navegador. |
-| Cierre tras los ajustes finales | Lint, build y 28 unitarias aprobados; repeticiones dirigidas de Ajustar, lectura/exportación y Palabras aprobadas. |
+| Cierre tras los ajustes finales | Lint, build y 29 unitarias aprobados; repeticiones dirigidas de Ajustar, lectura/exportación y Palabras aprobadas. |
 | Ajustar | 34 comprobaciones; toque, mouse y teclado; 320×568, 390×700 y 1440×900. Incluye seleccionar otra frase sin recentrar, reanudar al final de A–B y volver a sus controles después de editar campos. |
 | Lectura/exportación | 38 comprobaciones; cuatro combinaciones de render, dos focos, nueve tamaños, siete familias, reduced motion y recorrido de descarga/reproducción/reimportación/recarga. |
 | Captura móvil existente | 107 comprobaciones aprobadas en Chromium; cinco tamaños y tres formatos, con toques nativos. |
@@ -81,6 +81,8 @@ Commit funcional: `4526430`. Node 24.19.0, Playwright Core 1.64.1 y Chromium del
 | No ejecutado | Teléfonos físicos/teclado virtual; tres fixtures condicionales AAC/Opus/MP3 que no estaban disponibles. |
 
 Las últimas regresiones cubren también una elección manual de fuente/color en la última palabra: una heurística de rima podía reemplazarla, y ahora la decisión manual vuelve a aplicarse después de la heurística.
+
+Los tres niveles de intensidad producen variación al elegir únicamente Colores, incluso con paleta automática. La regresión comprueba que cambia ese grupo y que no cambian fuentes, animaciones, ambientes ni marcas.
 
 ## Evidencia visual
 
