@@ -2,6 +2,7 @@
 // 1) un para-ti.html anterior (trae su letra y sus tiempos)
 // 2) archivos de letra con tiempos: .lrc, .srt, .vtt
 
+import { normalize } from './project.js';
 const num = (s) => parseFloat(String(s).replace(',', '.'));
 
 // ───────────── HTML anterior ─────────────
@@ -15,6 +16,7 @@ export function readPayloadFromHtml(html) {
     throw new Error('El archivo trae la letra dañada.');
   }
   if (d?.v === 3 && typeof d.text === 'string' && Array.isArray(d.sync)) {
+    d = { ...d, ...normalize(d) };
     const phrases = d.text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
     if (!phrases.length) throw new Error('Ese proyecto no contiene letra.');
     const lines = phrases.map((text, i) => {
@@ -23,16 +25,17 @@ export function readPayloadFromHtml(html) {
       return [t, text, Array.isArray(s?.wt) && s.wt.every(Number.isFinite) ? s.wt : undefined, Array.isArray(s?.wd) ? s.wd : undefined];
     });
     return { intro: d.intro ?? 'para ti', outro: d.outro ?? '', seed: d.seed | 0, lines,
+      sourceStart: Number.isFinite(d.sourceStart) && d.sourceStart >= 0 ? d.sourceStart : 0,
       project: { text: phrases.join('\n'), sync: d.sync, style: d.style, over: d.over, offset: d.offset } };
   }
   if (!d || !Array.isArray(d.lines) || !d.lines.length) throw new Error('Ese archivo no es un proyecto compatible de Letras ASCII o no contiene letra.');
   return {
-    intro: d.intro ?? 'para ti',
-    outro: d.outro ?? '',
+    intro: typeof d.intro === 'string' ? d.intro.slice(0,200) : 'para ti',
+    outro: typeof d.outro === 'string' ? d.outro.slice(0,200) : '',
     seed: d.seed | 0,
     lines: d.lines
-      .filter((l) => Array.isArray(l) && Number.isFinite(+l[0]) && typeof l[1] === 'string' && l[1].trim())
-      .map((l) => [+l[0], l[1].trim(), Array.isArray(l[2]) ? l[2].map(Number) : undefined]),
+      .filter((l) => Array.isArray(l) && (l[0] == null || Number.isFinite(+l[0])) && typeof l[1] === 'string' && l[1].trim())
+      .map((l) => [l[0] == null ? null : +l[0], l[1].trim(), Array.isArray(l[2]) && l[2].every(Number.isFinite) ? l[2] : undefined]),
   };
 }
 

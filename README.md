@@ -40,10 +40,18 @@ Suites activas: smoke, migración de datos, fiabilidad integral, UX adaptativa (
 - Modelo `v:3`: texto por líneas, `sync` absoluto respecto a la canción, `style`, `over`, `clip`, `offset` y `seed`. El HTML exportado usa tiempos relativos al tramo.
 - Exportar requiere al menos una frase renderizable dentro del tramo; se avisa si faltan marcas o quedan fuera.
 - Reimportar v3 conserva estilo, overrides, duraciones y frases no marcadas. LRC/SRT/VTT y HTML antiguo siguen admitidos.
+- Los nuevos HTML incluyen `sourceStart` para recuperar tiempos absolutos al reimportar un tramo. El campo de inicio permite sobrescribirlo; los HTML anteriores conservan el ajuste manual.
+- Importar y quitar tiempos tienen un deshacer inmediato. Una edición posterior invalida ese respaldo para no reemplazar trabajo más reciente.
+- Exportar congela proyecto, archivo y tramo desde el clic; los recursos se revalidan para evitar incrustar un reproductor antiguo del caché.
 - El guardado captura una instantánea por ID y se vacía antes de cambiar de proyecto. Si falla, se conserva pendiente y se informa del error.
+- Las aperturas de proyecto aplican solo el último resultado solicitado. Cancelar la recuperación conserva el proyecto actual y su audio; los archivos guardados se comprueban con su identificador de medio.
 - Cambiar la canción conserva texto/diseño y pide confirmación antes de reiniciar sus marcas.
 - Los controles avanzados permanecen disponibles en grupos plegables. En una pantalla con poco alto puede ser necesario desplazar el panel; las pestañas, la navegación y el transporte conservan acceso.
 - Límites preventivos de archivo y memoria protegen la decodificación. Los contenedores/códecs admitidos dependen del navegador. Cancelar detiene el análisis y descarta resultados pendientes; una decodificación nativa que ya empezó puede terminar internamente.
 - IndexedDB es local al origen: integrar en GLYPHOS no traslada automáticamente proyectos entre dominios. La integración y nuevas salidas se trabajan por separado.
 
 Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-inicial.md` para la auditoría previa (describe la versión anterior, no el estado corregido).
+
+## Reauditoría
+
+`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit` tras instalar WebKit y sus dependencias. Eso no certifica Safari o iOS físicos.

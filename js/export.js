@@ -32,6 +32,10 @@ export function exportReady(app) {
 }
 
 const b64Arr = (u8) => bytesToB64(u8);
+export function exportSnapshot(app) {
+  const clip = { ...app.clip() };
+  return { project: structuredClone(app.project), media: app.media, file: app.file, clip: () => clip };
+}
 
 function payloadOf(app, title) {
   const p = app.project;
@@ -50,6 +54,7 @@ function payloadOf(app, title) {
     over: p.over,
     seed: p.seed,
     offset: p.offset,
+    sourceStart: clip.start,
     dur: +(clip.end - clip.start).toFixed(3),
     energy: { fps: en.fps, low: b64Arr(en.low), mid: b64Arr(en.mid), hi: b64Arr(en.hi), hit: b64Arr(en.hit) },
   };
@@ -57,7 +62,7 @@ function payloadOf(app, title) {
 
 async function assets() {
   const get = async (name) => {
-    const r = await fetch(assetUrl(name), { cache: 'force-cache' });
+    const r = await fetch(assetUrl(name), { cache: 'no-cache' });
     if (!r.ok) throw new Error('No pude leer ' + name + ' del sitio. Recarga la página e intenta de nuevo.');
     return r.text();
   };
@@ -72,7 +77,7 @@ async function inlineFonts(css) {
   const data = new Map();
   await Promise.all(
     urls.map(async (u) => {
-      const r = await fetch(assetUrl(u), { cache: 'force-cache' });
+      const r = await fetch(assetUrl(u), { cache: 'no-cache' });
       if (!r.ok) throw new Error('No pude leer las tipografías del sitio. Recarga la página e intenta de nuevo.');
       data.set(u, 'data:font/woff2;base64,' + bytesToB64(await r.arrayBuffer()));
     }),
@@ -84,6 +89,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 // -> { blob, bytes, plan }
 export async function buildHtml(app, { title } = {}) {
+  app = exportSnapshot(app);
   const plan = audioPlan(app);
   if (!plan) throw new Error('Falta la canción.');
   if (!exportReady(app).done) throw new Error('No hay frases con tiempo dentro del tramo elegido. Revisa Canción y Marcar.');

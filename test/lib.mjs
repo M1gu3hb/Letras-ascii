@@ -1,4 +1,4 @@
-import { chromium } from 'playwright-core';
+import { chromium, webkit, firefox } from 'playwright-core';
 import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
@@ -18,7 +18,10 @@ export function serve(root) {
   return { srv, port: srv.address().port };
 }
 export async function launch(opts = {}) {
-  const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || chromium.executablePath(), args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required', ...(opts.args || [])] });
+  const kind = process.env.PLAYWRIGHT_BROWSER || 'chromium';
+  const type = { chromium, webkit, firefox }[kind];
+  if (!type) throw new Error('Unknown PLAYWRIGHT_BROWSER: ' + kind);
+  const b = await type.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || type.executablePath(), args: [...(kind === 'chromium' ? ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] : []), ...(opts.args || [])] });
   return b;
 }
 export function watch(page, errs) {

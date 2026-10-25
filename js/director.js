@@ -525,7 +525,7 @@ function styleDurations(line) {
 function autoFx(lines, opts, seed) {
   const level = clamp(opts.fx ?? 0, 0, 1);
   const capsMode = opts.caps || 'off';
-  const allowed = opts.fxSet && opts.fxSet.length ? opts.fxSet.filter((f) => WORD_FX.includes(f)) : WORD_FX;
+  const allowed = Array.isArray(opts.fxSet) ? opts.fxSet.filter((f) => WORD_FX.includes(f)) : WORD_FX;
   const freq = new Map();
   lines.forEach((l) =>
     l.words.forEach((w) => {

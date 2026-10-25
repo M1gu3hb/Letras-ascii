@@ -18,12 +18,13 @@ import { h } from './ui.js';
 import { phrasesOf, fmtTime, fmtTimeMs, syncedCount } from './project.js';
 import { HELD_MIN } from './timeline.js';
 
-import { lsGet, plural } from './mark/support.js';
+import { lsGet, plural, disposeBeep } from './mark/support.js';
 
 export class MarkPanel {
   constructor(app) {
     this.app = app;
     this.mode = lsGet('markmode', 'phrase');
+    if (!['word','phrase'].includes(this.mode)) this.mode = 'phrase';
     // fase: 'idle' (sin empezar) · 'count' (cuenta 3-2-1) · 'run' (suena y se marca) · 'pause' · 'listen' (solo escuchar) · 'done' (todo marcado)
     this.phase = 'idle';
     this.prevPhase = 'idle'; // a la que se vuelve si se cancela la cuenta
@@ -492,6 +493,6 @@ export class MarkPanel {
       this.revealCurrent();
     }
   }
-  destroy() { this.leave('destroy'); this.clearLock(); clearInterval(this.fadeT); clearTimeout(this.goT); this.cancelCount(true); }
+  destroy() { this.leave('destroy'); this.clearLock(); clearInterval(this.fadeT); clearTimeout(this.goT); this.cancelCount(true); disposeBeep(); }
 
 }

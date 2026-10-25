@@ -158,7 +158,7 @@ export function continuePass(self) {
     self.arm(self.resumePoint(), false);
 }
 
-export function arm(self, from, fresh) {
+export function arm(self, from, fresh, prepare) {
     const app = self.app;
     if (!app.media) return toast('Primero sube la canción (paso 1).', 'bad');
     if (!self.phrases().length) return toast('Primero escribe la letra (paso 2).', 'bad');
@@ -168,7 +168,7 @@ export function arm(self, from, fresh) {
     app.audioFull.pause();
     app.player.pause();
     app.player.seek(from);
-    const go = () => self.goRun(from);
+    const go = () => { prepare?.(); self.goRun(from); };
     if (self.countOn) self.startCount(go);
     else {
       self.prevPhase = self.phase === 'count' ? 'idle' : self.phase;
@@ -450,13 +450,15 @@ export function jump(self, i, restart) {
     const clip0 = app.clip().start;
     if (restart) {
       const from = s ? Math.max(0, s.t - clip0 - 2) : self.resumePoint();
-      app.project.sync[i] = null;
       self.cur = { p: i, k: 0 };
       self.pend = { wt: [], wd: [] };
-      app.projectChanged();
-      self.phase = 'idle';
+      self.phase = self.complete() ? 'done' : 'idle';
       self.paint();
-      self.arm(from, false);
+      self.arm(from, false, () => {
+        self.backup = { sync: structuredClone(app.project.sync) };
+        app.project.sync[i] = null;
+        app.projectChanged();
+      });
     } else if (s) {
       const t = s.t - clip0;
       if (t < -0.5 || t > app.player.dur) return toast('Esa frase queda fuera del tramo elegido.', 'bad');

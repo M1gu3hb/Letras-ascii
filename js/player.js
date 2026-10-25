@@ -51,6 +51,7 @@ export class Player {
 
   // url: audio del tramo (WAV o el original); sin url = reloj virtual de `dur` segundos
   setSource(url, dur) {
+    this.playEpoch = (this.playEpoch || 0) + 1;
     const a = this.audio;
     this.dur = dur;
     this.virtual = !url;
@@ -83,6 +84,7 @@ export class Player {
   }
 
   async start(from = 0) {
+    if (this.destroyed) return;
     this.seek(from);
     this.scene.wpCursor = 0;
     this.setState('playing');
@@ -90,6 +92,7 @@ export class Player {
   }
 
   async resumeClock() {
+    const epoch = this.playEpoch = (this.playEpoch || 0) + 1;
     this.lastCT = -1;
     this.audio.volume = 1;
     if (this.virtual) {
@@ -100,22 +103,26 @@ export class Player {
     try {
       await this.audio.play();
     } catch (e) {
-      this.setState(this.mode === 'player' ? 'intro' : 'paused');
+      if (epoch === this.playEpoch && !this.destroyed) this.setState(this.mode === 'player' ? 'intro' : 'paused');
       return;
     }
+    if (epoch !== this.playEpoch || this.destroyed || this.state !== 'playing') return;
     this.keepAwake();
   }
 
   pause() {
+    this.playEpoch = (this.playEpoch || 0) + 1;
     if (this.state === 'playing') this.vT = this.time(performance.now() / 1000);
     if (!this.virtual) this.audio.pause();
     this.setState('paused');
   }
   resume() {
+    if (this.destroyed) return;
     this.setState('playing');
     this.resumeClock();
   }
   stop() {
+    this.playEpoch = (this.playEpoch || 0) + 1;
     this.audio.pause();
     this.seek(0);
     this.setState(this.mode === 'player' ? 'intro' : 'paused');
@@ -159,17 +166,20 @@ export class Player {
   }
 
   async keepAwake() {
+    if (this.wakeRequest || this.wake || this.destroyed || this.state !== 'playing') return;
     try {
-      if ('wakeLock' in navigator && !this.wake) {
-        this.wake = await navigator.wakeLock.request('screen');
-        if (this.state !== 'playing' || this.destroyed) { this.releaseAwake(); return; }
-        this.wake.addEventListener('release', () => (this.wake = null));
+      if ('wakeLock' in navigator) {
+        this.wakeRequest = navigator.wakeLock.request('screen');
+        const wake = await this.wakeRequest;
+        if (this.state !== 'playing' || this.destroyed) { await wake.release(); return; }
+        this.wake = wake;
+        wake.addEventListener('release', () => { if (this.wake === wake) this.wake = null; });
       }
-    } catch (e) {}
+    } catch (e) {} finally { this.wakeRequest = null; }
   }
 
   releaseAwake() { const wake = this.wake; this.wake = null; if (wake) Promise.resolve(wake.release()).catch(() => {}); }
-  destroy() { this.destroyed = true; cancelAnimationFrame(this.raf); this.scope.abort(); this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.releaseAwake(); }
+  destroy() { this.destroyed = true; this.playEpoch = (this.playEpoch || 0) + 1; cancelAnimationFrame(this.raf); this.scope.abort(); this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.releaseAwake(); }
 
   // tiempo del tramo, interpolado entre actualizaciones del audio
   time(now) {

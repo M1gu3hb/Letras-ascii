@@ -105,7 +105,12 @@ export function buildView(panel) {
     panel.hereBtn.addEventListener('keyup', (e) => (e.key === 'Enter' || e.key === ' ') && panel.hereRelease());
     const hearWord = h('button', { class: 'btn', type: 'button', onclick: () => panel.preview() }, '▶ Escuchar palabra');
     const hearPhrase = h('button', { class: 'btn', type: 'button', onclick: () => panel.playPhrase() }, '▶ Escuchar frase');
-    panel.hereRow = h('div', { class: 'row wrap here-row' }, panel.hereBtn, hearWord, hearPhrase);
+    const redoPhrase = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
+      if (!panel.sel || !confirm('¿Volver a marcar esta frase? Las otras frases se conservan.')) return;
+      const src = panel.sel.src;
+      app.selectTab('mark'); app.panels.mark.jump(src, true);
+    } }, 'Volver a marcar esta frase');
+    panel.hereRow = h('div', { class: 'row wrap here-row' }, panel.hereBtn, hearWord, hearPhrase, redoPhrase);
     panel.timeBox = h('div', { class: 'tbox' }, panel.hereRow, startRow, durRow, phrRow);
 
     // estilo de la palabra

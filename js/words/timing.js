@@ -260,5 +260,5 @@ export function afterTime(self, src, k, replay = true) {
       if (s && s.wt) self.dInfo.textContent = `${(sw || 0).toFixed(2)} s · ${(sw || 0) >= self.holdMin() ? 'larga: se estira' : 'corta'}`;
     }
     clearTimeout(self._t);
-    if (replay && self.playOn && !self.hereAt) self._t = setTimeout(() => self.sel && self.preview(), 420);
+    if (replay && self.playOn && !self.hereAt) self._t = setTimeout(() => !app.destroyed && app.tab === 'words' && self.sel && self.preview(), 420);
 }
