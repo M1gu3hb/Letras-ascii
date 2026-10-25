@@ -2449,8 +2449,8 @@ kbd {
     grid-template-rows: minmax(0, 1fr);
   }
   /* escribiendo la letra: que el teclado no se coma toda la pantalla */
-  .studio:has(.panel textarea:focus) .left,
-  .studio:has(.panel textarea:focus) .tabs {
+  .studio:has(.panel textarea:focus) .left, .studio.editing-text .left,
+  .studio:has(.panel textarea:focus) .tabs, .studio.editing-text .tabs {
     display: none;
   }
   /* los avisos flotan por encima de la barra de pestañas, no encima de ella */
@@ -2592,10 +2592,10 @@ kbd {
   .studio[data-tab='mark'] .right {
     border-left: 0;
   }
-  .studio:has(.panel textarea:focus) .left {
+  .studio:has(.panel textarea:focus) .left, .studio.editing-text .left {
     display: flex;
   }
-  .studio:has(.panel textarea:focus) .tabs {
+  .studio:has(.panel textarea:focus) .tabs, .studio.editing-text .tabs {
     display: flex;
   }
   .trow.main {

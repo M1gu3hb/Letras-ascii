@@ -14,6 +14,17 @@ export class TextPanel {
       placeholder: 'Escribe o pega aquí la letra.\nUna frase por línea.\nLas líneas vacías se ignoran.',
       'aria-label': 'Letra de la canción',
     });
+    // Keep the editing layout stable from pointerdown through click. Blurring
+    // the textarea must not move the button out from under the same touch.
+    const pointers = new Set();
+    const settleEditing = () => requestAnimationFrame(() => {
+      if (!app.destroyed && document.activeElement !== this.ta && !pointers.size) app.root.classList.remove('editing-text');
+    });
+    this.ta.addEventListener('focus', () => app.root.classList.add('editing-text'));
+    this.ta.addEventListener('blur', () => { if (!pointers.size) settleEditing(); });
+    app.scope.listen(window, 'pointerdown', (event) => pointers.add(event.pointerId), { capture: true });
+    for (const event of ['pointerup','pointercancel']) app.scope.listen(window, event, (e) => { pointers.delete(e.pointerId); settleEditing(); }, { capture: true });
+    app.on('tab', (tab) => { if (tab !== 'text') app.root.classList.remove('editing-text'); });
     this.count = h('div', { class: 'muted small' });
     this.ta.addEventListener('input', () => {
       const p = app.project;

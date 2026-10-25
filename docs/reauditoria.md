@@ -27,6 +27,7 @@ La reparación sí había sido integrada y desplegada; no quedó solamente en un
 | Volver mediante caché de navegación podía dejar el destinatario destruido | `pagehide.persisted` conserva reproductor/URL y pausa solo si suena; `pageshow` actualiza el tamaño y los controles. |
 | Solicitudes de reproducción o Wake Lock solapadas podían interferirse | Generación de reproducción, una solicitud de Wake Lock simultánea y liberación vinculada a su propio sentinel. |
 | El estado de carga dejaba controles de fondo accesibles al teclado | Diálogo estable, fondo inerte, foco contenido, Escape/Cancelar y devolución del foco. |
+| El primer toque en Continuar podía perderse al salir del textarea móvil | El layout de edición se conserva entre pointerdown y click; el botón no se mueve al perder foco la letra. Regresión con reducción y ampliación del viewport. |
 | Semántica de panel duplicada y recursos residuales | Un panel accesible activo; limpieza de audición, contexto de cuenta y desmontaje probado con remontaje. |
 
 ## Trazabilidad de la auditoría original
