@@ -55,3 +55,7 @@ Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-in
 ## Reauditoría
 
 `docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit` tras instalar WebKit y sus dependencias. Eso no certifica Safari o iOS físicos.
+
+## Experiencia en teléfono
+
+Ver `docs/experiencia-movil.md`. Las reglas de teléfono viven en `css/mobile.css`; el build las incluye después del estilo base. Marcar usa un espacio propio independiente del formato artístico. La vista previa se puede plegar con Vista y los ajustes de captura se despliegan sin quitar funciones. `test/mobile-capture.mjs` cubre toques nativos y los tres formatos en teléfono, también en WebKit.

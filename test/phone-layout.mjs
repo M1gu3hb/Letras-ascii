@@ -2,6 +2,7 @@
 // Lo que reportó Miguel con capturas de su Android: «se ve raro, no encajan las palabras, horizontal y vertical se ven muy mal».
 // Solo texto inventado y audio sintético. Mide (no adivina): caja del escenario, lienzo, rejilla y palabras.
 import { serve, launch, watch } from './lib.mjs';
+import {openMarkOptions} from './lib.mjs';
 const { srv, port } = serve(process.env.SITE || 'site');
 const b = await launch();
 const errs = [];
@@ -178,7 +179,9 @@ for (const dev of DEVS) {
   ok(idle.stage && idle.stage.r <= vw + 1 && idle.stage.x >= -1, `${dev.name} · Marcar: la caja de la frase cabe a lo ancho`);
   ok(idle.ovX <= 0, `${dev.name} · Marcar: sin desbordes a los lados`);
   // con cuenta apagada y «solo frases» se llega pronto al botón grande
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .mopts .switch');
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Solo frases")').catch(() => {});
   // empezar de cero (hay marcas): «Empezar de cero»
   const fresh = pg.locator('.mcard.idle .btn.alt');

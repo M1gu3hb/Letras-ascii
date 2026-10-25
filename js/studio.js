@@ -162,11 +162,13 @@ export class App {
       lsSet('format', this.format);
       this.applyFormat();
     });
+    this.mobilePreviewChoices = {};
+    this.previewToggle = h('button', { class: 'tbtn preview-toggle', type: 'button', 'aria-label': 'Mostrar vista previa', 'aria-expanded': 'false', onclick: () => { this.mobilePreviewChoices[this.tab] = this.root.dataset.preview !== 'open'; this.paintMobilePreview(); } }, 'Vista');
     this.moreBtn = h('button', { class: 'tbtn moreBtn', type: 'button', 'aria-label': 'Más controles', 'aria-expanded': 'false', onclick: () => this.toggleMore() }, '⋯');
     this.transport = h(
       'div',
       { class: 'transport' },
-      h('div', { class: 'trow main' }, this.playBtn, this.restartBtn, this.timeEl, this.scrub, this.moreBtn),
+      h('div', { class: 'trow main' }, this.playBtn, this.restartBtn, this.timeEl, this.scrub, this.previewToggle, this.moreBtn),
       h('div', { class: 'trow extra' }, this.loopBtn, this.rateSel, fmtSel),
     );
     this.savedEl = h('span', { class: 'saved', role: 'status' }, '');
@@ -234,6 +236,7 @@ export class App {
     this.previousTab = this.tab;
     this.tab = id;
     this.root.dataset.tab = id;
+    this.paintMobilePreview();
     // si en la pestaña anterior el escenario estaba oculto y quedaron cambios sin dibujar, ahora que se ve se ponen al día
     if (this.needRebuild && this.scene && !this.stageHidden()) this.rebuild();
     for (const [k, b] of Object.entries(this.tabBtns)) {
@@ -270,6 +273,15 @@ export class App {
     this.demoHold = false;
     if (this.player.demo) this.player.demoT0 = performance.now() / 1000;
     this.syncDemo();
+  }
+
+  paintMobilePreview() {
+    const open = this.mobilePreviewChoices[this.tab] ?? this.tab === 'style';
+    this.root.dataset.preview = open ? 'open' : 'closed';
+    this.previewToggle.setAttribute('aria-expanded', String(open));
+    this.previewToggle.setAttribute('aria-label', open ? 'Ocultar vista previa' : 'Mostrar vista previa');
+    this.previewToggle.classList.toggle('on', open);
+    if (this.scene) requestAnimationFrame(() => { if (!this.destroyed) { this.scene.resize(); this.syncDemo(); } });
   }
 
   toggleMore(force) {

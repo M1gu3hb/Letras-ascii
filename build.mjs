@@ -26,7 +26,7 @@ const fonts = [
   font('Unbounded', 900, 'unbounded-latin-900-normal.woff2'),
   font('Cinzel', 900, 'cinzel-latin-900-normal.woff2'),
 ].join('\n');
-const css = fonts + '\n' + readFileSync('css/style.css', 'utf8');
+const css = fonts + '\n' + readFileSync('css/style.css', 'utf8') + '\n' + readFileSync('css/mobile.css', 'utf8');
 
 const html = `<!doctype html>
 <html lang="es">

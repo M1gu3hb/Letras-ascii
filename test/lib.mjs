@@ -32,3 +32,8 @@ export function watch(page, errs) {
   page.on('response', (r) => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ': ' + r.url()); });
   page.on('requestfailed', (r) => { if (!r.url().startsWith('blob:')) errs.push('reqfail: ' + r.url().slice(0, 80)); });
 }
+
+export async function openMarkOptions(page) {
+  const toggle = page.getByRole('button', { name: 'Configurar modo y cuenta regresiva', exact: true });
+  if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+}
