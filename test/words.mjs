@@ -60,6 +60,8 @@ for (const [name, cfg] of Object.entries(DEV)) {
   console.log('\n── ' + name + ' ──');
   const { ctx, pg } = await open(cfg, name);
   const touch = !!cfg.hasTouch;
+  const preview = pg.getByRole('button', { name: 'Mostrar vista previa', exact: true });
+  if (await preview.isVisible()) { await preview.tap(); await pg.waitForFunction(()=>!window.__app.needRebuild&&!!window.__app.scene.tl); }
 
   // 1. la tira muestra la frase elegida
   let s = await S(pg);

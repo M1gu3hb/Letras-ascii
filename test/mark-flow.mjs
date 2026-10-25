@@ -5,6 +5,7 @@
 //   · pausa, fin del tramo, respaldo («Recuperar»), vista previa y «Siguiente»
 // Solo texto de prueba inventado y audio sintético (test/media/kick120.wav).
 import { serve, launch, watch } from './lib.mjs';
+import {openMarkOptions} from './lib.mjs';
 const { srv, port } = serve('site');
 const b = await launch();
 const errs = [];
@@ -96,6 +97,7 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   await pg.waitForTimeout(200);
   ok((await txt(pg, '.mcard.idle .btn.primary')).includes('Seguir con la frase 3'), 'con 2 frases ya marcadas, el botón principal es «Seguir con la frase 3»');
   ok(await visible(pg, '.mcard.idle .btn.alt'), '…y aparece «Empezar de cero»');
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Solo frases")');
   const t0 = Date.now();
   await pg.click('.mcard.idle .btn.alt');
@@ -122,7 +124,7 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   ok((await phase(pg)) === 'run', 'después de la cuenta se está marcando');
   ok((await nMarks(pg)) === 0, 'al sonar, lo anterior se quitó (quedó respaldado)');
   ok(await visible(pg, '.pad'), 'ahora SÍ aparece el botón grande');
-  ok((await txt(pg, '.pad .padtxt')) === 'Toca', 'en «Solo frases» el botón dice «Toca»');
+  ok((await txt(pg, '.pad .padtxt')) === 'Marcar frase', 'en «Solo frases» el botón dice «Toca»');
   ok((await txt(pg, '.mstat')) === `Frase 1 de ${N}`, 'arriba dice «Frase 1 de ' + N + '»');
   ok((await txt(pg, '.mline.cur')).startsWith('luna'), 'arriba va la frase que sigues');
 
@@ -232,13 +234,15 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
 // ═════════ PC: palabra por palabra, deshacer, saltar, pausa, teclado ═════════
 {
   const { ctx, pg } = await open({ viewport: { width: 1440, height: 900 } });
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .mopts .switch'); // cuenta apagada: arranca en seguida
   ok((await pg.evaluate(() => window.__app.panels.mark.countOn)) === false, 'cuenta regresiva apagada desde la tarjeta');
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Palabra por palabra")');
   await pg.click('.mcard.idle .btn.primary');
   await pg.waitForTimeout(500);
   ok((await phase(pg)) === 'run' && (await pg.evaluate(() => window.__app.player.state)) === 'playing', 'con la cuenta apagada la canción suena en seguida');
-  ok((await txt(pg, '.pad .padtxt')) === 'Mantén', 'en «Palabra por palabra» el botón dice «Mantén»');
+  ok((await txt(pg, '.pad .padtxt')) === 'Marcar palabra', 'en «Palabra por palabra» el botón dice «Mantén»');
   ok((await pg.locator('.mline.cur .mw').count()) === 4, 'arriba se ven las 4 palabras de la frase');
   ok(await pg.evaluate(() => document.querySelector('.mline.cur .mw').classList.contains('now')), 'la palabra que sigue está resaltada');
   const w = [];
@@ -269,13 +273,17 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   // pausa con el botón de arriba
   await pg.waitForTimeout(700);
   const at = await audioNow(pg);
-  await pg.click('.mtopbtn');
+  const bounce = await pg.evaluate(() => {
+    document.querySelector('.mtopbtn').click();
+    const m = window.__app.panels.mark, waiting = m.resumeBtn.classList.contains('wait');
+    m.resumeBtn.click();
+    return { waiting, phase: m.phase };
+  });
   await waitPhase(pg, 'pause', 1500);
   ok((await pg.evaluate(() => window.__app.player.state)) !== 'playing', 'pausa: la canción se detiene');
   ok(!(await visible(pg, '.pad')) && (await txt(pg, '.mcard.pause .mtitle')) === 'En pausa', 'pausa: no hay botón grande y dice «En pausa»');
-  ok(await waiting(pg, '.mcard.pause .btn.primary'), 'pausa: «Seguir» espera un instante por si el dedo rebota');
-  await pg.click('.mcard.pause .btn.primary', { force: true }).catch(() => {});
-  ok((await phase(pg)) === 'pause', 'pausa: un toque inmediato NO reanuda');
+  ok(bounce.waiting, 'pausa: «Seguir» espera un instante por si el dedo rebota');
+  ok(bounce.phase === 'pause', 'pausa: un toque inmediato NO reanuda');
   await pg.waitForTimeout(600);
   ok(!(await waiting(pg, '.mcard.pause .btn.primary')), 'pausa: «Seguir» ya se puede tocar');
   await pg.click('.mcard.pause .btn.primary');
@@ -308,7 +316,9 @@ const tap = (pg, o = {}) => pg.evaluate(PAGE_TAP, { hold: o.hold ?? null, late: 
   });
   await pg.waitForFunction(() => Math.abs(window.__app.player.dur - 3) < 0.05, null, { timeout: 5000 });
   await pg.evaluate(() => window.__app.emit('reset'));
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .mopts .switch');
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Solo frases")');
   await pg.click('.mcard.idle .btn.primary');
   await waitPhase(pg, 'run', 2000);
@@ -351,6 +361,7 @@ for (const cfg of [
 ]) {
   const { ctx, pg } = await open({ viewport: cfg.viewport, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   const T = cfg.name;
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Solo frases")');
   await pg.tap('.mcard.idle .btn.primary');
   await waitPhase(pg, 'run', 6000);

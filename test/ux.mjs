@@ -1,6 +1,7 @@
 // Contrato de usabilidad en todos los tamaños: sin scroll horizontal, lo que se toca cabe en pantalla y es lo bastante grande
 // para el dedo, el botón de marcar no se mueve ni sale de la pantalla mientras se marca. Solo texto de prueba inventado.
 import { serve, launch, watch } from './lib.mjs';
+import {openMarkOptions} from './lib.mjs';
 const { srv, port } = serve('site');
 const b = await launch();
 const errs = [];
@@ -100,6 +101,7 @@ for (const name of only) {
   // marcar: el botón grande no se mueve ni sale de la pantalla
   await pg.click('#tab-mark');
   await pg.waitForTimeout(300);
+  await openMarkOptions(pg);
   await pg.click('.segb:text-is("Solo frases")');
   // ya había 6 frases marcadas: «Empezar de cero» arranca (con la cuenta 3-2-1) desde el principio del tramo
   await pg.click('.mcard.idle .btn.alt');

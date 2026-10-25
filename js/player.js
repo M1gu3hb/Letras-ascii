@@ -83,6 +83,21 @@ export class Player {
     else if (this.state === 'ended') await this.start(0);
   }
 
+  async prepareGesture() {
+    if (this.virtual) return true;
+    const audio = this.audio, epoch = this.playEpoch, muted = audio.muted;
+    // Unlock this exact media element while the Start tap is still active.
+    // A timer at the end of a countdown has no user gesture on mobile Safari.
+    audio.muted = true;
+    try {
+      await audio.play();
+      if (this.destroyed || epoch !== this.playEpoch) return false;
+      audio.pause();
+      return true;
+    } catch { return false; }
+    finally { audio.muted = muted; }
+  }
+
   async start(from = 0) {
     if (this.destroyed) return;
     this.seek(from);
@@ -100,10 +115,11 @@ export class Player {
       return;
     }
     this.audio.playbackRate = this.rate;
+    this.lastPlayError = null;
     try {
       await this.audio.play();
     } catch (e) {
-      if (epoch === this.playEpoch && !this.destroyed) this.setState(this.mode === 'player' ? 'intro' : 'paused');
+      if (epoch === this.playEpoch && !this.destroyed) { this.lastPlayError = { name: e.name, message: e.message }; this.setState(this.mode === 'player' ? 'intro' : 'paused'); }
       return;
     }
     if (epoch !== this.playEpoch || this.destroyed || this.state !== 'playing') return;

@@ -22,8 +22,18 @@ export class TextPanel {
     });
     this.ta.addEventListener('focus', () => app.root.classList.add('editing-text'));
     this.ta.addEventListener('blur', () => { if (!pointers.size) settleEditing(); });
+    let clickFallback = 0;
     app.scope.listen(window, 'pointerdown', (event) => pointers.add(event.pointerId), { capture: true });
-    for (const event of ['pointerup','pointercancel']) app.scope.listen(window, event, (e) => { pointers.delete(e.pointerId); settleEditing(); }, { capture: true });
+    app.scope.listen(window, 'pointerup', (event) => {
+      pointers.delete(event.pointerId);
+      // Touch browsers can deliver click after the next animation frame.
+      // Keep the target in place until that click has actually dispatched.
+      clearTimeout(clickFallback);
+      clickFallback = setTimeout(settleEditing, 700);
+    }, { capture: true });
+    app.scope.listen(window, 'click', () => { clearTimeout(clickFallback); settleEditing(); }, { capture: true });
+    app.scope.listen(window, 'pointercancel', (event) => { pointers.delete(event.pointerId); settleEditing(); }, { capture: true });
+    app.scope.cleanups.push(() => clearTimeout(clickFallback));
     app.on('tab', (tab) => { if (tab !== 'text') app.root.classList.remove('editing-text'); });
     this.count = h('div', { class: 'muted small' });
     this.ta.addEventListener('input', () => {

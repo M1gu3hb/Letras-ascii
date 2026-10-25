@@ -69,7 +69,8 @@ export function buildView(panel) {
       panel.paintZone();
     });
     panel.cdSwitch.classList.add('small');
-    panel.opts = h('div', { class: 'mopts' }, panel.modeSeg, panel.cdSwitch);
+    panel.optsToggle = h('button', { class: 'btn ghost mopts-toggle', type: 'button', 'aria-label': 'Configurar modo y cuenta regresiva', 'aria-expanded': 'false', onclick: () => { const open = panel.opts.classList.toggle('expanded'); panel.optsToggle.setAttribute('aria-expanded', String(open)); } });
+    panel.opts = h('div', { class: 'mopts' }, panel.optsToggle, panel.modeSeg, panel.cdSwitch);
     panel.restoreBtn = act('btn ghost small mrestore', '↺ Recuperar los tiempos anteriores', () => panel.restoreBackup());
     panel.restoreBtn.hidden = true;
 

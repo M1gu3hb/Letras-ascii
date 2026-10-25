@@ -112,6 +112,7 @@ export function stepCount(self) {
 }
 
 export function cancelCount(self, quiet = false) {
+    if (!quiet) self.pendingStart = null;
     const cd = self.cd;
     if (!cd) return;
     clearTimeout(cd.timer);
@@ -155,10 +156,10 @@ export function startFresh(self) {
 }
 
 export function continuePass(self) {
-    self.arm(self.resumePoint(), false);
+    self.arm(self.resumePoint(), self.reason === 'blocked' && self.fresh, undefined, self.reason === 'blocked');
 }
 
-export function arm(self, from, fresh, prepare) {
+export function arm(self, from, fresh, prepare, immediate = false) {
     const app = self.app;
     if (!app.media) return toast('Primero sube la canción (paso 1).', 'bad');
     if (!self.phrases().length) return toast('Primero escribe la letra (paso 2).', 'bad');
@@ -168,11 +169,22 @@ export function arm(self, from, fresh, prepare) {
     app.audioFull.pause();
     app.player.pause();
     app.player.seek(from);
-    const go = () => { prepare?.(); self.goRun(from); };
-    if (self.countOn) self.startCount(go);
-    else {
+    const token = self.pendingStart = {};
+    const run = () => {
+      if (self.pendingStart !== token || app.destroyed || app.tab !== 'mark') return;
+      self.pendingStart = null;
+      prepare?.(); self.goRun(from);
+    };
+    if (self.countOn && !immediate) {
+      const activation = app.player.prepareGesture();
+      self.startCount(() => activation.then((ready) => {
+        if (self.pendingStart !== token) return;
+        if (ready) run();
+        else { self.pendingStart = null; self.enterPause('blocked'); }
+      }));
+    } else {
       self.prevPhase = self.phase === 'count' ? 'idle' : self.phase;
-      go();
+      run();
     }
 }
 

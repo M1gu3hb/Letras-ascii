@@ -272,11 +272,11 @@ export class MarkPanel {
       this.padTxt.textContent = 'Suelta al terminar';
       this.pad.setAttribute('aria-label', 'Suelta cuando termine de sonar la palabra');
     } else if (this.mode === 'word') {
-      this.padTxt.textContent = 'Mantén';
+      this.padTxt.textContent = 'Marcar palabra';
       this.padSub.textContent = word ? `presionado al empezar «${word}»; suelta cuando termine` : 'presionado mientras suena cada palabra';
       this.pad.setAttribute('aria-label', 'Mantén presionado mientras suena la palabra' + (word ? ' ' + word : ''));
     } else {
-      this.padTxt.textContent = 'Toca';
+      this.padTxt.textContent = 'Marcar frase';
       this.padSub.textContent = 'justo cuando empiece la frase';
       this.pad.setAttribute('aria-label', 'Toca cuando empiece la frase');
     }
@@ -355,6 +355,7 @@ export class MarkPanel {
     const sc = syncedCount(app.project);
     this.el.dataset.phase = ph;
     this.el.dataset.mode = this.mode;
+    this.optsToggle.textContent = `${this.mode === 'word' ? 'Por palabras' : 'Por frases'} · ${this.countOn ? 'cuenta 3, 2, 1' : 'sin cuenta'}`;
     this.pad.hidden = ph !== 'run';
     for (const [k, c] of Object.entries(this.cards)) c.hidden = k !== ph;
     this.mbtns.hidden = ph !== 'run';
@@ -410,7 +411,7 @@ export class MarkPanel {
             ? `Faltan ${plural(left, 'frase', 'frases')} por marcar. Sigue desde la última o empieza otra vez.`
             : 'Ya no faltan frases.'
           : this.reason === 'blocked'
-            ? 'Toca «Seguir» para que vuelva a sonar.'
+            ? 'Toca «Seguir» para empezar ahora, sin cuenta regresiva.'
             : this.reason === 'undo'
               ? 'Sigue desde unos segundos antes de esa palabra.'
               : `Vas en la frase ${Math.min(this.cur.p + 1, n)} de ${n}. Lo que ya marcaste se queda.`;

@@ -162,11 +162,13 @@ export class App {
       lsSet('format', this.format);
       this.applyFormat();
     });
+    this.mobilePreviewChoices = {};
+    this.previewToggle = h('button', { class: 'tbtn preview-toggle', type: 'button', 'aria-label': 'Mostrar vista previa', 'aria-expanded': 'false', onclick: () => { this.mobilePreviewChoices[this.tab] = this.root.dataset.preview !== 'open'; this.paintMobilePreview(); } }, 'Vista');
     this.moreBtn = h('button', { class: 'tbtn moreBtn', type: 'button', 'aria-label': 'Más controles', 'aria-expanded': 'false', onclick: () => this.toggleMore() }, '⋯');
     this.transport = h(
       'div',
       { class: 'transport' },
-      h('div', { class: 'trow main' }, this.playBtn, this.restartBtn, this.timeEl, this.scrub, this.moreBtn),
+      h('div', { class: 'trow main' }, this.playBtn, this.restartBtn, this.timeEl, this.scrub, this.previewToggle, this.moreBtn),
       h('div', { class: 'trow extra' }, this.loopBtn, this.rateSel, fmtSel),
     );
     this.savedEl = h('span', { class: 'saved', role: 'status' }, '');
@@ -234,6 +236,7 @@ export class App {
     this.previousTab = this.tab;
     this.tab = id;
     this.root.dataset.tab = id;
+    this.paintMobilePreview();
     // si en la pestaña anterior el escenario estaba oculto y quedaron cambios sin dibujar, ahora que se ve se ponen al día
     if (this.needRebuild && this.scene && !this.stageHidden()) this.rebuild();
     for (const [k, b] of Object.entries(this.tabBtns)) {
@@ -270,6 +273,15 @@ export class App {
     this.demoHold = false;
     if (this.player.demo) this.player.demoT0 = performance.now() / 1000;
     this.syncDemo();
+  }
+
+  paintMobilePreview() {
+    const open = this.mobilePreviewChoices[this.tab] ?? this.tab === 'style';
+    this.root.dataset.preview = open ? 'open' : 'closed';
+    this.previewToggle.setAttribute('aria-expanded', String(open));
+    this.previewToggle.setAttribute('aria-label', open ? 'Ocultar vista previa' : 'Mostrar vista previa');
+    this.previewToggle.classList.toggle('on', open);
+    if (this.scene) requestAnimationFrame(() => { if (!this.destroyed) { if (open && this.needRebuild && !this.stageHidden()) this.rebuild(); this.scene.resize(); this.syncDemo(); } });
   }
 
   toggleMore(force) {
@@ -475,12 +487,12 @@ export class App {
   // vitrina: mientras no suena nada, el escenario se mueve solo (con un bombo de mentiras); al darle ▶ manda la canción
   syncDemo() {
     if (!this.player || !this.scene) return;
-    const k = this.kind;
+    const k = this.previewKind();
     // con tu canción ya marcada, en «Estilo» el escenario repite el arranque sin sonido (con los graves reales)
     // para que veas cada cambio al mover un control; con ▶ suena de verdad
     // (lo mismo en la pantalla completa: se ve vivo desde que se abre, hasta que le des ▶)
     const peek = false; // Paused means paused; styling never advances the real song silently.
-    const want = (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
+    const want = !this.stageHidden() && (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
     const tl = this.scene.tl;
     let len = tl && tl.lines.length ? Math.min(Math.max(this.player.dur || 30, 6), tl.lastHide + 1.6) : 8;
     let from = 0;

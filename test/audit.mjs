@@ -1,6 +1,7 @@
 // Auditoría de UI: capturas de cada pestaña en varios tamaños + reproducción del salto de scroll al marcar.
 // Usa solo texto de prueba inventado.
 import { serve, launch, watch } from './lib.mjs';
+import {openMarkOptions} from './lib.mjs';
 import { mkdirSync } from 'node:fs';
 const OUT = process.env.OUT || 'test/audit';
 mkdirSync(OUT, { recursive: true });
@@ -72,6 +73,7 @@ if (!process.argv[2] || process.argv[2].includes('desk-1440')) {
   await pg.fill('textarea.lyrics', LINES);
   await pg.click('#tab-mark');
   // un toque por frase; la cuenta regresiva 3, 2, 1 va primero y la canción arranca desde el principio del tramo
+  await openMarkOptions(pg);
   await pg.click('.mcard.idle .segb:text-is("Solo frases")');
   await pg.click('.mcard.idle .btn.primary');
   await pg.waitForFunction(() => window.__app.panels.mark.phase === 'run', null, { timeout: 8000 });
