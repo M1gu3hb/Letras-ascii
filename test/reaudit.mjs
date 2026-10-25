@@ -5,7 +5,7 @@ import {serve,launch,watch} from './lib.mjs';
 import {readPayloadFromHtml} from '../js/import.js';
 import '../scripts/fixtures.mjs';
 
-mkdirSync('test/audit/reaudit',{recursive:true});
+mkdirSync('test/audit/reaudit',{recursive:true});copyFileSync('js/store.js','site/reaudit-store.js');
 const {srv,port}=serve('site'),browser=await launch(),errors=[];let count=0;
 const check=(condition,message)=>{assert.ok(condition,message);console.log('ok',++count,message)};
 const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});
@@ -16,7 +16,7 @@ try {
  await page.goto(`http://localhost:${port}/`);await waitReady();
  await page.setInputFiles('#songfile','test/media/kick120.wav');
  await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController,null,{timeout:30000});
- console.log('recovery setup',await page.evaluate(async()=>{const a=window.__app,r=await new Promise((resolve,reject)=>{const q=indexedDB.open('letras-ascii');q.onerror=()=>reject(q.error);q.onsuccess=()=>{const db=q.result,t=db.transaction('proyectos');const f=t.objectStore('proyectos').get(a.id+':file');t.oncomplete=()=>{db.close();resolve(f.result)}}});return {song:a.project.song,file:r?{name:r.name,size:r.blob?.size,mediaId:r.mediaId}:null,status:document.querySelector('.toast')?.textContent}}));
+ console.log('recovery setup',await page.evaluate(async()=>{const a=window.__app,s=await import('/reaudit-store.js');let retry;try{await s.putFile(a.id,a.file,a.file.name,a.file.type,a.project.song.mediaId);retry='ok'}catch(e){retry=e.name+': '+e.message}const r=await s.getFile(a.id);return {retry,song:a.project.song,file:r?{size:r.blob?.size,mediaId:r.mediaId}:null}}));
  const cancelled=await page.evaluate(async()=>{
   const a=window.__app,old=a.media;await a.save();const busy=a.busy;let inert=false;
   a.busy=function(...args){busy.apply(this,args);if(args[0]?.startsWith('Recuperando')){inert=this.top.inert&&this.grid.inert;this.cancelLoad()}};
@@ -122,6 +122,13 @@ try {
   await mediaPage.setInputFiles('#songfile','test/media/'+name);await mediaPage.waitForFunction(()=>window.__app.media&&!window.__app.loadController,null,{timeout:30000});
   check(await mediaPage.evaluate(name=>window.__app.file.name===name&&Math.abs(window.__app.media.dur-3)<.15,name),'native decoding: '+name);await mediaPage.close();
  }
+ const fileFailure=await page.evaluate(async()=>{
+  const a=window.__app,put=IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put=function(record,...args){if(record.kind==='file')throw new DOMException('Simulated file quota','QuotaExceededError');return put.call(this,record,...args)};
+  try {const result=await a.loadFile(a.file);return result&&!!a.media&&!a.mediaAlert.hidden}
+  finally {IDBObjectStore.prototype.put=put}
+ });
+ check(fileFailure,'failure to save audio remains visible after metadata autosave succeeds');
  const touch=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});const phone=await touch.newPage();watch(phone,errors);
  await phone.goto(`http://localhost:${port}/`);await phone.waitForFunction(()=>document.documentElement.classList.contains('ready'));await phone.setInputFiles('#songfile','test/media/kick120.wav');await phone.waitForFunction(()=>window.__app.media&&!window.__app.loadController);
  await phone.click('#tab-text');await phone.getByLabel('Letra de la canción',{exact:true}).fill('Se conserva al cambiar el espacio visible');await phone.setViewportSize({width:390,height:400});

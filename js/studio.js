@@ -170,6 +170,7 @@ export class App {
       h('div', { class: 'trow extra' }, this.loopBtn, this.rateSel, fmtSel),
     );
     this.savedEl = h('span', { class: 'saved', role: 'status' }, '');
+    this.mediaAlert = h('div', { class: 'save-alert media-save-alert', role: 'alert', hidden: true }, 'No pude guardar el archivo de la canción. Conserva esta pestaña abierta y descarga el HTML antes de recargar. Después tendrás que elegir la canción otra vez.');
     this.saveAlert = h('div', { class: 'save-alert', role: 'alert', hidden: true }, 'No se pudo guardar. Conserva esta pestaña abierta y libera espacio antes de cambiar de proyecto.');
     this.nameEl = h('input', { class: 'pname', type: 'text', placeholder: 'Nombre del proyecto', 'aria-label': 'Nombre del proyecto', maxlength: 60 });
     this.nameEl.addEventListener('input', () => {
@@ -207,7 +208,7 @@ export class App {
     this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
-    root.replaceChildren(top, this.saveAlert, this.grid, this.theater, this.status);
+    root.replaceChildren(top, this.saveAlert, this.mediaAlert, this.grid, this.theater, this.status);
     this.applyFormat();
   }
 

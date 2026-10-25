@@ -39,9 +39,11 @@ export async function loadFile(self, file, { keepProject = false } = {}) {
       self.emit('clip', self.clip());
       // Capture the project immediately, before an asynchronous file write.
       self.saveSoon();
+      self.mediaAlert.hidden = true;
       try {
         await store.putFile(id, file, file.name, file.type, p.song.mediaId);
       } catch (e) {
+        if (active()) self.mediaAlert.hidden = false;
         if (active()) toast('No pude guardar la canción en este navegador. Funciona igual, pero si recargas tendrás que subirla otra vez.', 'bad');
       }
       if (!active() || id !== self.id) return false;
@@ -104,6 +106,7 @@ export async function openProject(self, id) {
         toast('Recuperé la letra y el diseño. Vuelve a elegir la canción; el archivo guardado no está disponible.', 'bad');
       }
       if (!active()) return false;
+      self.mediaAlert.hidden = !project.song || !!file;
       self.id = id;
       self.project = project;
       self.media = media;
@@ -135,6 +138,7 @@ export async function newAndReset(self) {
     if (!active()) return false;
     self.audioFull.pause();
     self.player.pause();
+    self.mediaAlert.hidden = true;
     self.id = uid();
     self.project = newProject();
     self.media = null;

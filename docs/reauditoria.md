@@ -15,6 +15,7 @@ La reparación sí había sido integrada y desplegada; no quedó solamente en un
 | Cancelar la recuperación vaciaba el audio y devolvía éxito | La apertura prepara proyecto y medios sin reemplazar el estado actual hasta terminar. Cancelar descarta el resultado y conserva el medio anterior. |
 | Aperturas solapadas podían aplicar un resultado antiguo | Un controlador por operación valida cada paso; únicamente se aplica la operación vigente. |
 | Tras fallar la persistencia de una canción nueva se podía reutilizar un blob anterior | Identificador de medio compartido entre metadatos y blob; se rechaza una pareja incoherente y se pide elegir el archivo. |
+| WebKit podía rechazar la persistencia de un File procedente del selector | Se guardan bytes propios como Blob y se verifica recuperación real. Si falla el archivo, el aviso permanece visible aunque se guarden los metadatos. |
 | Un HTML con mensajes/overrides inválidos podía contaminar el motor | Normalización de tipos, opciones y rangos; las marcas null antiguas ya no se convierten a cero. |
 | Una exportación lenta podía mezclar letra, audio, tramo y nombre de revisiones distintas | Instantánea desde el clic, exclusión de exportaciones duplicadas y prueba que cambia el proyecto mientras se esperan recursos. |
 | El archivo original podía dejar de ser legible después de cargarlo | Si el proveedor revoca el acceso o cambia el archivo, se exporta WAV desde el audio ya decodificado y se informa de la calidad aplicada. |

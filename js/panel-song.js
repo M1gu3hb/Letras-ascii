@@ -104,7 +104,7 @@ export class SongPanel {
 
   async pick(file) {
     const ok = await this.app.loadFile(file);
-    if (ok) {
+    if (ok && this.app.mediaAlert.hidden) {
       toast('Listo. Elige el tramo y sigue con la letra.');
     }
   }
