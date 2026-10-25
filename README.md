@@ -33,7 +33,7 @@ npm test
 
 `npm test` ejecuta lint, pruebas unitarias, build y regresiones de navegador. `npm run test:browser -- reliability ux` selecciona suites. `PLAYWRIGHT_EXECUTABLE_PATH` permite utilizar un Chromium ya instalado. `scripts/fixtures.mjs` crea audio sintético original para las pruebas; no hacen falta canciones personales. Las capturas se guardan en `test/audit/` y están excluidas de Git.
 
-Suites activas: smoke, migración de datos, fiabilidad integral, UX adaptativa (11 tamaños), disposición/formato de escena, captura por frase/palabra, timeline por mouse/toque/teclado, aspecto ASCII, exportación y pantalla completa. Los demás scripts antiguos son utilidades de diagnóstico, no parte de la condición de aprobación. GitHub Actions ejecuta la suite con permisos de lectura y sin credenciales de despliegue.
+Suites activas: smoke, migración de datos, fiabilidad integral, UX adaptativa (14 tamaños), disposición/formato de escena, captura por frase/palabra, timeline por mouse/toque/teclado, aspecto ASCII, exportación y pantalla completa. Los demás scripts antiguos son utilidades de diagnóstico, no parte de la condición de aprobación. GitHub Actions ejecuta la suite con permisos de lectura y sin credenciales de despliegue.
 
 ## Contratos y límites
 

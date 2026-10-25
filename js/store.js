@@ -37,7 +37,12 @@ const wrap = (mode, fn) =>
 // así el guardado automático no reescribe la canción cada vez.
 export const putProject = (id, project, name) => wrap('readwrite', (s) => s.put({ id, kind: 'project', name, updated: Date.now(), project }));
 export const getProject = (id) => wrap('readonly', (s) => s.get(id));
-export const putFile = (id, blob, name, type, mediaId) => wrap('readwrite', (s) => s.put({ id: id + ':file', kind: 'file', blob, name, type, mediaId }));
+export async function putFile(id, source, name, type, mediaId) {
+  // Own the bytes before IndexedDB serialization. WebKit can reject a File
+  // backed by a picker/provider even after that same File decoded correctly.
+  const blob = new Blob([await source.arrayBuffer()], { type: type || source.type });
+  return wrap('readwrite', (s) => s.put({ id: id + ':file', kind: 'file', blob, name, type, mediaId }));
+}
 export const getFile = (id) => wrap('readonly', (s) => s.get(id + ':file'));
 export const delProject = (id) =>
   wrap('readwrite', (s) => {
