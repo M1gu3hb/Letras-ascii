@@ -9,6 +9,7 @@ mkdirSync('test/audit/reaudit',{recursive:true});
 const {srv,port}=serve('site'),browser=await launch(),errors=[];let count=0;
 const check=(condition,message)=>{assert.ok(condition,message);console.log('ok',++count,message)};
 const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});
+context.setDefaultTimeout(20000);
 const page=await context.newPage();watch(page,errors);page.on('dialog',dialog=>dialog.accept());
 const waitReady=()=>page.waitForFunction(()=>document.documentElement.classList.contains('ready'),null,{timeout:20000});
 try {

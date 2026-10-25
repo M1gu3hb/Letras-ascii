@@ -5,6 +5,7 @@ import {readPayloadFromHtml} from '../js/import.js';
 const {srv,port}=serve('site');const browser=await launch();const errors=[];let checks=0;
 const check=(value,message)=>{assert.ok(value,message);checks++;console.log('ok',message)};
 const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});const page=await context.newPage();watch(page,errors);
+context.setDefaultTimeout(20000);
 try {
  await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media);
