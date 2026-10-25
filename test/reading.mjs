@@ -45,9 +45,11 @@ try{
   check(valid,`${face}: changing font and size recalculates wrapping and ball geometry`);
  }
  await page.emulateMedia({reducedMotion:'reduce'});
+ await page.waitForFunction(()=>window.__app.scene.motionQuery.matches);
  const still=await page.evaluate(()=>{const s=window.__app.scene,w=s.tl.lines[0].words[1];s.render(w.onset+.02,'song');const a={...s.textLayer.ball};s.render(w.onset+.04,'song');return s.R.reduced&&JSON.stringify(a)===JSON.stringify(s.textLayer.ball)});
  check(still,'reduced motion keeps normal karaoke and its ball still');
  await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.waitForFunction(()=>!window.__app.scene.motionQuery.matches);
  await page.evaluate(()=>{const a=window.__app;Object.assign(a.project.style,{karaokeFace:'hand',karaokeSize:1,karaokeDetail:1});a.projectChanged();a.rebuild()});
  await page.setViewportSize({width:390,height:700});
  await page.getByRole('button',{name:'Ver en pantalla completa',exact:true}).click();
