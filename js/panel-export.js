@@ -67,7 +67,7 @@ export class ExportPanel {
     this.busy.textContent = 'Armando el archivo…';
     await new Promise((r) => setTimeout(r, 30));
     try {
-      const { blob, bytes } = await buildHtml(snapshot, { title: snapshot.project.name });
+      const { blob, bytes, plan } = await buildHtml(snapshot, { title: snapshot.project.name });
       if (app.destroyed) { win?.close(); return; }
       if (kind === 'download') {
         download(blob, filename);
@@ -78,7 +78,7 @@ export class ExportPanel {
         else window.open(url, '_blank');
         setTimeout(() => URL.revokeObjectURL(url), 120000);
       }
-      this.busy.textContent = `Archivo de ${fmtBytes(bytes)}`;
+      this.busy.textContent = `Archivo de ${fmtBytes(bytes)} · audio ${plan.label}`;
     } catch (e) {
       if (win) win.close();
       this.busy.textContent = '';

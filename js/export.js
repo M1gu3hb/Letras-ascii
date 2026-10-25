@@ -8,6 +8,10 @@ import { assetUrl } from './assets.js';
 
 const MB = 1048576;
 export const ORIGINAL_MAX = 12 * MB;
+function wavPlan(media, dur) {
+  const tier = pickTier(dur), ch = tier.mono || media.chans.length === 1 ? 1 : 2;
+  return { kind: 'wav', tier, label: TIER_LABELS[tier.id], bytes: Math.round(dur * tier.sr * ch * 2) + 44, dur };
+}
 
 // qué audio se va a incluir y cuánto pesa, sin construirlo todavía
 export function audioPlan(app) {
@@ -18,9 +22,7 @@ export function audioPlan(app) {
   const whole = clip.start < 0.06 && clip.end >= m.dur - 0.35;
   const f = app.file;
   if (f && !m.video && whole && f.size <= ORIGINAL_MAX) return { kind: 'original', label: TIER_LABELS.original, bytes: f.size, dur };
-  const tier = pickTier(dur);
-  const ch = tier.mono || m.chans.length === 1 ? 1 : 2;
-  return { kind: 'wav', tier, label: TIER_LABELS[tier.id], bytes: Math.round(dur * tier.sr * ch * 2) + 44, dur };
+  return wavPlan(m, dur);
 }
 
 export function exportReady(app) {
@@ -90,7 +92,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 // -> { blob, bytes, plan }
 export async function buildHtml(app, { title } = {}) {
   app = exportSnapshot(app);
-  const plan = audioPlan(app);
+  let plan = audioPlan(app);
   if (!plan) throw new Error('Falta la canción.');
   if (!exportReady(app).done) throw new Error('No hay frases con tiempo dentro del tramo elegido. Revisa Canción y Marcar.');
   const name = (title || app.project.name || 'para ti').trim() || 'para ti';
@@ -99,9 +101,16 @@ export async function buildHtml(app, { title } = {}) {
   let audioB64;
   let mime;
   if (plan.kind === 'original') {
-    audioB64 = bytesToB64(await app.file.arrayBuffer());
-    mime = app.file.type || 'audio/mpeg';
-  } else {
+    try {
+      audioB64 = bytesToB64(await app.file.arrayBuffer());
+      mime = app.file.type || 'audio/mpeg';
+    } catch {
+      // Mobile file providers may revoke access or the source can change on
+      // disk after loading. Decoded PCM still owns the song being edited.
+      plan = wavPlan(app.media, plan.dur);
+    }
+  }
+  if (plan.kind === 'wav') {
     const clip = app.clip();
     const ab = wavOf(app.media, clip.start, clip.end, { sr: plan.tier.sr, mono: plan.tier.mono });
     audioB64 = bytesToB64(ab);

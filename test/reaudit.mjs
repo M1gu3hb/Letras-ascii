@@ -17,19 +17,20 @@ try {
  await page.setInputFiles('#songfile','test/media/kick120.wav');
  await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController,null,{timeout:30000});
  const cancelled=await page.evaluate(async()=>{
-  const a=window.__app,old=a.media;await a.save();const opening=a.openProject(a.id);
-  while(!a.loadController||a.status.classList.contains('hidden'))await new Promise(resolve=>setTimeout(resolve,0));
-  const inert=a.top.inert&&a.grid.inert;a.cancelLoad();const result=await opening;
-  return {result,same:a.media===old,inert,restored:!a.top.inert&&!a.grid.inert};
+  const a=window.__app,old=a.media;await a.save();const busy=a.busy;let inert=false;
+  a.busy=function(...args){busy.apply(this,args);if(args[0]?.startsWith('Recuperando')){inert=this.top.inert&&this.grid.inert;this.cancelLoad()}};
+  try {const result=await a.openProject(a.id);return {result,same:a.media===old,inert,restored:!a.top.inert&&!a.grid.inert}}
+  finally {a.busy=busy}
  });
  check(!cancelled.result&&cancelled.same&&cancelled.inert&&cancelled.restored,'cancel recovery preserves current audio and restores keyboard access');
  const originalID=await page.evaluate(()=>window.__app.id);
  await page.evaluate(async()=>{const a=window.__app;await a.newAndReset();a.project.text='Second project';await a.save()});
  const secondID=await page.evaluate(()=>window.__app.id);
  const overlap=await page.evaluate(async({first,second})=>{
-  const a=window.__app;const opening=a.openProject(first);
-  while(!a.loadController||a.status.classList.contains('hidden'))await new Promise(resolve=>setTimeout(resolve,0));
-  const latest=a.openProject(second);return {results:await Promise.all([opening,latest]),id:a.id,text:a.project.text,media:!!a.media};
+  const a=window.__app,busy=a.busy;let latest;
+  a.busy=function(...args){busy.apply(this,args);if(!latest&&args[0]?.startsWith('Recuperando')){a.busy=busy;latest=a.openProject(second)}};
+  try {const initial=await a.openProject(first);return {results:[initial,latest?await latest:false],id:a.id,text:a.project.text,media:!!a.media}}
+  finally {a.busy=busy}
  },{first:originalID,second:secondID});
  check(!overlap.results[0]&&overlap.results[1]&&overlap.id===secondID&&!overlap.media&&overlap.text==='Second project','latest project request wins without mixing old audio or text');
  await page.evaluate(id=>window.__app.openProject(id),originalID);
@@ -68,6 +69,12 @@ try {
  await page.locator('.lyrics').fill('Otra edición');
  check(!(await page.locator('.undo-change').isVisible()),'later edits invalidate old undo instead of overwriting newer work');
  await page.evaluate(()=>{const a=window.__app;a.project.text='Palabras de prueba';a.project.sync=[{t:1}];a.projectChanged();a.emit('reset')});
+ await page.click('#tab-export');
+ await page.evaluate(()=>{window.__app.file.arrayBuffer=async()=>{throw new DOMException('File no longer readable','NotReadableError')}});
+ const fallbackP=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar el HTML'}).click();await(await fallbackP).saveAs('test/media/reaudit-fallback.html');
+ const fallback=JSON.parse(readFileSync('test/media/reaudit-fallback.html','utf8').match(/<script id="payload" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+ check(fallback.audio.kind==='wav'&&fallback.audio.mime==='audio/wav','decoded audio can still be exported when the original file handle becomes unreadable');
+ await page.evaluate(()=>{delete window.__app.file.arrayBuffer});
  await page.click('#tab-style');await page.getByRole('button',{name:'Siguiente: Exportar',exact:true}).click();
  check(await page.locator('#tab-export').getAttribute('aria-selected')==='true','word refinement is truly optional in the main journey');
  await page.getByRole('button',{name:'Atrás',exact:true}).click();

@@ -17,6 +17,7 @@ La reparación sí había sido integrada y desplegada; no quedó solamente en un
 | Tras fallar la persistencia de una canción nueva se podía reutilizar un blob anterior | Identificador de medio compartido entre metadatos y blob; se rechaza una pareja incoherente y se pide elegir el archivo. |
 | Un HTML con mensajes/overrides inválidos podía contaminar el motor | Normalización de tipos, opciones y rangos; las marcas null antiguas ya no se convierten a cero. |
 | Una exportación lenta podía mezclar letra, audio, tramo y nombre de revisiones distintas | Instantánea desde el clic, exclusión de exportaciones duplicadas y prueba que cambia el proyecto mientras se esperan recursos. |
+| El archivo original podía dejar de ser legible después de cargarlo | Si el proveedor revoca el acceso o cambia el archivo, se exporta WAV desde el audio ya decodificado y se informa de la calidad aplicada. |
 | Al reimportar un tramo no nulo faltaba su origen temporal | `sourceStart` en nuevos HTML; recuperación automática con opción de inicio manual para compatibilidad. |
 | Faltaba el deshacer solicitado para reemplazos y limpieza de tiempos | Respaldo inmediato, restauración completa del cambio e invalidación al editar después. |
 | La audición diferida de una palabra podía arrancar en otra herramienta | Cancelación al salir, reset y destroy, más guardas en la llamada. |
