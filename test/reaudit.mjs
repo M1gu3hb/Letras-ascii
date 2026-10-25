@@ -16,13 +16,14 @@ try {
  await page.goto(`http://localhost:${port}/`);await waitReady();
  await page.setInputFiles('#songfile','test/media/kick120.wav');
  await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController,null,{timeout:30000});
+ console.log('recovery setup',await page.evaluate(async()=>{const a=window.__app,r=await new Promise((resolve,reject)=>{const q=indexedDB.open('letras-ascii');q.onerror=()=>reject(q.error);q.onsuccess=()=>{const db=q.result,t=db.transaction('proyectos');const f=t.objectStore('proyectos').get(a.id+':file');t.oncomplete=()=>{db.close();resolve(f.result)}}});return {song:a.project.song,file:r?{name:r.name,size:r.blob?.size,mediaId:r.mediaId}:null,status:document.querySelector('.toast')?.textContent}}));
  const cancelled=await page.evaluate(async()=>{
   const a=window.__app,old=a.media;await a.save();const busy=a.busy;let inert=false;
   a.busy=function(...args){busy.apply(this,args);if(args[0]?.startsWith('Recuperando')){inert=this.top.inert&&this.grid.inert;this.cancelLoad()}};
   try {const result=await a.openProject(a.id);return {result,same:a.media===old,inert,restored:!a.top.inert&&!a.grid.inert}}
   finally {a.busy=busy}
  });
- check(!cancelled.result&&cancelled.same&&cancelled.inert&&cancelled.restored,'cancel recovery preserves current audio and restores keyboard access');
+ check(!cancelled.result&&cancelled.same&&cancelled.inert&&cancelled.restored,'cancel recovery preserves current audio and restores keyboard access: '+JSON.stringify(cancelled));
  const originalID=await page.evaluate(()=>window.__app.id);
  await page.evaluate(async()=>{const a=window.__app;await a.newAndReset();a.project.text='Second project';await a.save()});
  const secondID=await page.evaluate(()=>window.__app.id);
