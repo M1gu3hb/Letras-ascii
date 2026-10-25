@@ -106,6 +106,7 @@ for (const dev of DEVS) {
       if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click();
     }
     await pg.locator('select[aria-label="Forma de la pantalla"]').selectOption(fmt);
+    if (await more.isVisible() && await more.getAttribute('aria-expanded') === 'true') await more.click();
     await pg.waitForTimeout(420);
     const m = await pg.evaluate(MEASURE, { inTheater: false });
     ok(m.visible, `${dev.name} · ${fmt}: el escenario se ve en «Estilo»`);
