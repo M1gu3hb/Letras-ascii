@@ -123,3 +123,12 @@
   .studio .markpane .pad { background: var(--rose); color: #250c18; }
   .studio .markpane .pad .padsub { color: #391222; }
 }
+
+@media (max-width: 600px), (max-width: 1000px) and (max-height: 520px) {
+  .studio .markpane .mcard.count {
+    display: grid; grid-template-rows: minmax(0,1fr) auto 44px;
+    justify-items: center; padding: 8px; gap: 4px; overflow: hidden;
+  }
+  .studio .markpane .mcard.count .cnum { font-size: clamp(48px,12dvh,96px); line-height: 1; }
+  .studio .markpane .mcard.count .btn { min-height: 44px; }
+}

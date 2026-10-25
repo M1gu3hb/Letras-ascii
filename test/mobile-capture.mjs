@@ -5,7 +5,7 @@ import {serve,watch,openMarkOptions} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 const kind=process.env.PLAYWRIGHT_BROWSER||'chromium',type={chromium,webkit}[kind];
 const launchOptions={executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]};
-const browser=await type.launch(launchOptions);
+let browser=await type.launch(launchOptions);
 const {srv,port}=serve('site');const errors=[];let count=0;
 const check=(ok,msg)=>{assert.ok(ok,msg);console.log('ok',++count,msg)};
 const folder='test/audit/mobile-repair';mkdirSync(folder,{recursive:true});
@@ -59,13 +59,18 @@ try{
   check(await matrix.page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3&&!window.__app.player.demo),'restored marked lyrics stay paused when the phone preview is collapsed');
   await close(matrix.page,matrix.context);
  }
+ if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
  for(const mode of ['phrase','word']){
-  const {page,context}=await open(390,700,true);await fill(page,'tall');
+  const [width,height]=mode==='phrase'?[320,568]:[390,700];
+  const {page,context}=await open(width,height,true);await fill(page,'tall');
   await openMarkOptions(page);if(mode==='word')await page.getByRole('button',{name:'Palabra por palabra',exact:true}).tap();
   if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap();
   await page.locator('.mcard.idle .primary').tap();await page.waitForTimeout(150);
   check(await page.evaluate(()=>window.__app.panels.mark.phase==='count'&&window.__app.audio.paused),`strict gesture ${mode}: countdown is silent and does not play the song early`);
-  await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused,null,{timeout:6000});await page.waitForTimeout(200);
+  check(await page.locator('.mcard.count .btn').evaluate(el=>{const r=el.getBoundingClientRect(),z=el.closest('.mzone').getBoundingClientRect();return r.height>=44&&r.y>=z.y&&r.bottom<=z.bottom+1&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el}),`countdown ${width}×${height}: Cancel remains visible and touchable`);
+  try{await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused,null,{timeout:6000})}
+  catch(error){console.log('strict audio diagnostic',await page.evaluate(()=>({phase:window.__app.panels.mark.phase,reason:window.__app.panels.mark.reason,playError:window.__app.player.lastPlayError,ready:window.__app.audio.readyState})));throw error}
+  await page.waitForTimeout(200);
   check(await page.evaluate(()=>window.__app.player.t>.05),`strict gesture ${mode}: the audio actually advances after the countdown`);
   await page.screenshot({path:`${folder}/after-tall-running-${mode}-${kind}.png`});
   for(let i=0;i<(mode==='phrase'?3:6);i++){await page.locator('.pad').tap();await page.waitForTimeout(360)}
