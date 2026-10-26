@@ -216,7 +216,7 @@ export class App {
     this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
-    this.skipLink = h('a', { class: 'skip-link', href: '#panel-song', tabindex: '0', onclick: event => { event.preventDefault(); this.panels[this.tab]?.el.focus({ preventScroll: true }); } }, 'Saltar al paso actual');
+    this.skipLink = h('a', { class: 'skip-link', href: '#panel-song', tabindex: '0' }, 'Saltar al paso actual');
     root.replaceChildren(this.skipLink, top, this.saveAlert, this.mediaAlert, this.grid, this.theater, this.status);
     this.applyFormat();
   }

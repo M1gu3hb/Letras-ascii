@@ -2,7 +2,7 @@ import {spawnSync} from 'node:child_process';
 import './fixtures.mjs';
 const suites=process.argv.slice(2);
 const suiteTimeout=process.env.PLAYWRIGHT_BROWSER==='webkit'?180000:0;
-for(const name of suites.length?suites:['smoke','store','reliability','reaudit','mobile-capture','layout-bounds','ux','phone-layout','mark-flow','words','ascii-ui','ascii-export','theater','adjust','reading','audit-boundaries','seo-ux']){
+for(const name of suites.length?suites:['smoke','seo-ux','store','reliability','reaudit','mobile-capture','layout-bounds','ux','phone-layout','mark-flow','words','ascii-ui','ascii-export','theater','adjust','reading','audit-boundaries']){
  console.log(`\n>>> ${name}`);
  const result=spawnSync(process.execPath,[`test/${name}.mjs`],{stdio:'inherit',env:process.env,timeout:suiteTimeout,killSignal:'SIGKILL'});
  if(result.error){
