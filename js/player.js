@@ -40,14 +40,14 @@ export class Player {
     if (mode === 'player') {
       const act = (e) => {
         if (e.type === 'keydown') {
-          if (e.code !== 'Space') return;
+          if (e.code !== 'Space' || e.repeat) return;
           const tg = e.target;
           if (tg && tg.closest && tg.closest('textarea, input, select, button, a, [contenteditable]')) return;
           e.preventDefault();
         }
         this.tap();
       };
-      canvas.addEventListener('pointerdown', act, { signal: this.scope.signal });
+      canvas.addEventListener('click', act, { signal: this.scope.signal });
       window.addEventListener('keydown', act, { signal: this.scope.signal });
     }
     this.loop = this.loop.bind(this);

@@ -1,5 +1,4 @@
 import { h } from './ui.js';
-import { fmtTime } from './project.js';
 import { Scene } from './scene.js';
 import { Player } from './player.js';
 import { modelOf } from './project.js';
@@ -18,7 +17,9 @@ export async function bootPlayer(payload) {
   root.className = 'fullstage';
   const canvas = document.createElement('canvas');
   canvas.id = 'c';
-  canvas.setAttribute('aria-hidden', 'true');
+  canvas.setAttribute('role', 'button');
+  canvas.setAttribute('aria-label', 'Reproducir');
+  canvas.tabIndex = 0;
   root.replaceChildren(canvas);
   document.title = payload.title || 'para ti';
   await loadFonts();
@@ -26,7 +27,7 @@ export async function bootPlayer(payload) {
   const mime = (payload.audio && payload.audio.mime) || 'audio/wav';
   const url = URL.createObjectURL(new Blob([b64ToBytes($('audio-b64').textContent)], { type: mime }));
   const scene = new Scene(canvas);
-  scene.overlays = false; // Los controles DOM ya muestran inicio, pausa, fin y acciones.
+  scene.overlays = true;
   const e = payload.energy;
   scene.setEnergy({ fps: e.fps, low: b64ToBytes(e.low), mid: b64ToBytes(e.mid), hi: b64ToBytes(e.hi), hit: b64ToBytes(e.hit) }, 0);
   const model = modelOf({ text: payload.text, sync: payload.sync, style: payload.style, over: payload.over, seed: payload.seed, intro: payload.intro, outro: payload.outro, offset: payload.offset, clip: { start: 0, end: payload.dur } }, { start: 0, end: payload.dur });
@@ -35,6 +36,11 @@ export async function bootPlayer(payload) {
   const player = new Player(scene, audio, canvas, 'player');
   player.setSource(url, payload.dur);
   player.setState('intro');
+  canvas.addEventListener('keydown', event => {
+    if (event.code !== 'Enter') return;
+    event.preventDefault();
+    if (!event.repeat) void player.tap();
+  }, { signal: player.scope.signal });
   canvas.addEventListener('pointerdown', (ev) => scene.poke(ev.clientX, ev.clientY, 'tap'));
   canvas.addEventListener('pointermove', (ev) => {
     if (ev.pointerType === 'mouse' || ev.buttons) scene.poke(ev.clientX, ev.clientY, 'move');
@@ -44,22 +50,11 @@ export async function bootPlayer(payload) {
     clearTimeout(rt);
     rt = setTimeout(() => scene.resize(), 220);
   });
-  const play = h('button', { type: 'button', class: 'btn primary', onclick: () => player.tap() }, 'Reproducir');
-  const restart = h('button', { type: 'button', class: 'btn', onclick: () => player.start(0) }, 'Volver al inicio');
-  const seek = h('input', { type: 'range', min: 0, max: payload.dur, step: .05, value: 0, 'aria-label': 'Posición en la canción' });
-  seek.addEventListener('input', () => { if (player.state === 'intro' || player.state === 'ended') player.setState('paused'); player.seek(+seek.value); update(); });
-  const time = h('span', { class: 'player-time' });
-  const caption = h('p', { class: 'player-caption', 'aria-live': 'polite' }, payload.intro || 'Pulsa reproducir para comenzar');
-  const transcript = h('details', { class: 'player-transcript' }, h('summary', {}, 'Ver la letra'), h('div', {}, ...scene.tl.lines.map(line => h('p', {}, line.text))));
-  const controls = h('div', { class: 'recipient-controls' }, caption, h('div', { class: 'recipient-row' }, play, restart, time), seek, transcript);
-  root.append(controls);
-  const fitControls = () => { scene.bottomInset = controls.getBoundingClientRect().height + 24; scene.resize(); };
-  const controlsObserver = new ResizeObserver(fitControls); controlsObserver.observe(controls); fitControls();
+  const caption = h('p', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  const transcript = h('section', { class: 'sr-only', 'aria-label': 'Letra de la canción' }, ...scene.tl.lines.map(line => h('p', {}, line.text)));
+  root.append(caption, transcript);
   const update = () => {
-    play.textContent = player.state === 'playing' ? 'Pausar' : player.state === 'ended' ? 'Volver a reproducir' : 'Reproducir';
-    play.setAttribute('aria-label', play.textContent);
-    time.textContent = `${fmtTime(player.t)} / ${fmtTime(payload.dur)}`;
-    if (document.activeElement !== seek) seek.value = player.t;
+    canvas.setAttribute('aria-label', player.state === 'playing' ? 'Pausar' : player.state === 'ended' ? 'Volver a reproducir' : 'Reproducir');
     const line = [...scene.tl.lines].reverse().find((line) => player.t >= line.t && player.t < line.hideAt);
     const text = player.state === 'intro' ? payload.intro || 'Pulsa reproducir para comenzar' : player.state === 'ended' ? payload.outro || 'Fin de la canción' : line?.text || '';
     if (caption.textContent !== text) caption.textContent = text;
@@ -68,7 +63,7 @@ export async function bootPlayer(payload) {
   const timer = setInterval(update, 200); update();
   window.addEventListener('pagehide', (event) => {
     if (event.persisted) { if (player.state === 'playing') player.pause(); return; }
-    clearInterval(timer); clearTimeout(rt); controlsObserver.disconnect(); retireMediaUrl(audio, url); player.destroy();
+    clearInterval(timer); clearTimeout(rt); retireMediaUrl(audio, url); player.destroy();
   });
   window.addEventListener('pageshow', (event) => { if (event.persisted) { scene.resize(); update(); } });
   window.__player = player;

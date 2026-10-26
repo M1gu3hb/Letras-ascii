@@ -12,6 +12,8 @@ El flujo es Canción → Letra → Marcar → Ajustar → Estilo → Exportar. A
 
 El botón `?` abre la guía de las seis etapas, guardado y apertura del resultado. Siguiente/Atrás llevan el foco al contenido nuevo; volver a una etapa conserva su posición. En móvil y tableta, Vista permite plegar la previsualización. Consulta la [auditoría de SEO, UX y dispositivos](docs/auditoria-seo-ux.md) para evidencia, casos de recuperación y la matriz de tamaños.
 
+El HTML del destinatario conserva la presentación artística: corazón, frase y un pequeño «toca para empezar». La obra completa responde al toque y al teclado; no incorpora panel, barra de tiempo ni cajón de letra visibles. El karaoke inferior tiene fondo transparente y mantiene su bolita. Vista del destinatario abre ese mismo HTML para revisarlo; compartir consiste en enviar el archivo descargado.
+
 El build publica metadatos, tarjeta social, `robots.txt`, sitemap y una 404 con retorno al editor. La URL canónica está en `scripts/site-document.mjs`. Solo producción permite indexación; los previews de Vercel y los HTML personales exportados solicitan `noindex`. El contenido público inicial también explica el uso sin JavaScript.
 
 - `js/studio.js`: composición de la app y API estable utilizada por sus paneles.

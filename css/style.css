@@ -92,6 +92,8 @@ strong {
   display: block;
   touch-action: manipulation;
 }
+.fullstage canvas[role='button'] { cursor: pointer; touch-action: manipulation; }
+.fullstage canvas[role='button']:focus-visible { outline-offset: -4px; }
 
 /* ───────── estudio ─────────
    Tres formas de acomodarse, según el espacio que haya:
@@ -2797,14 +2799,6 @@ summary {
 .step-buttons .btn { white-space: normal; }
 .tab.complete i { display: grid; border-color: var(--ok); }
 .saved[data-state='error'] { color: var(--bad); white-space: normal; }
-.recipient-controls { position: fixed; z-index: 4; bottom: max(12px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(640px,calc(100% - 24px)); max-height: 45dvh; overflow: auto; padding: 12px; border: 1px solid var(--line2); border-radius: 14px; background: #0d0716ed; }
-.recipient-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.player-caption { margin: 0 0 8px; font-size: 14px; min-height: 1.5em; }
-.recipient-controls input { width: 100%; }
-.player-transcript { margin-top: 8px; }
-.player-transcript summary { cursor: pointer; min-height: 32px; }
-.player-transcript div { max-height: 30dvh; overflow: auto; }
-.player-time { font: 12px var(--mono); margin-left: auto; }
 @media (min-width: 900px) and (min-aspect-ratio: 1/1) and (min-height: 521px) {
   .grid { grid-template-columns: minmax(0,1fr) clamp(420px,40vw,700px); }
 }
@@ -2822,7 +2816,6 @@ summary {
 @media (pointer: coarse), (any-pointer: coarse) {
   .btn, .btn.small, .chip, .navb, .zb, .mini, .nb, .segb, .tbtn { min-width: 44px; min-height: 44px; }
   .tab { min-height: 56px; }
-  .player-transcript summary { min-height: 44px; }
   .zoomrow, .row.tight { flex-wrap: wrap; }
   .step-buttons .btn { min-height: 44px; }
   .tagseg button { min-height: 36px; }
@@ -2836,7 +2829,6 @@ summary {
   .tab { min-height: 44px; }
   .studio[data-tab='mark'] .mcard.done { gap: 6px; padding: 10px; }
   .mcard.done .btn.big { min-height: 44px; font-size: 15px; }
-  .recipient-controls { max-height: 48dvh; padding: 8px; }
 }
 @media (max-width: 380px) {
   .top { gap: 6px; }
@@ -2888,5 +2880,5 @@ summary {
 @media (pointer: coarse), (any-pointer: coarse) { .wave-zoom-hint { flex-basis: 100%; } }
 .save-alert { flex: none; color: var(--bad); padding: 8px 12px; border-bottom: 1px solid var(--bad); font-size: 13px; background: var(--panel); }
 @media (pointer: coarse), (any-pointer: coarse) {
- .studio input[type='range'], .recipient-controls input[type='range'] { height: 44px; }
+ .studio input[type='range'] { height: 44px; }
 }

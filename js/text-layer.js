@@ -134,9 +134,8 @@ export class TextLayer {
   drawKaraoke(ctx,t) {
     const state=this.state(t);this.visibleKaraoke=state;
     if(!state)return;
-    const {active,page}=state,band=this.band,contrast=this.style.karaokeContrast??1;
-    ctx.save();ctx.globalAlpha=1;ctx.fillStyle=`rgba(7,4,11,${clamp(.5+contrast*.18,0,1)})`;
-    ctx.fillRect(band.x,band.y,band.w,band.h);ctx.textAlign='left';ctx.textBaseline='top';
+    const {active,page}=state,contrast=this.style.karaokeContrast??1;
+    ctx.save();ctx.globalAlpha=1;ctx.textAlign='left';ctx.textBaseline='top';
     for(const w of page){
       const current=w.k===active;
       ctx.fillStyle=current?'#ffffff':t>=w.onset?'#dbcfe5':'#efe5f4';

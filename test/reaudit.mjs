@@ -97,10 +97,9 @@ try {
  writeFileSync('site/reaudit-recipient.html',html);
  const recipient=await context.newPage();watch(recipient,errors);
  await recipient.goto(`http://localhost:${port}/reaudit-recipient.html`);await recipient.waitForFunction(()=>document.documentElement.classList.contains('ready'));
- await recipient.getByLabel('Posición en la canción').press('End');await recipient.getByLabel('Posición en la canción').press('PageDown');
- check(await recipient.evaluate(()=>window.__player.state==='paused'&&window.__player.t>1),'recipient seeking before play leaves the intro and keeps the chosen position');
- await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();await recipient.waitForTimeout(120);
- check(await recipient.evaluate(()=>window.__player.t>1),'recipient playback starts at the chosen position instead of restarting at zero');
+ check(await recipient.getByRole('slider').count()===0&&await recipient.evaluate(()=>window.__player.state==='intro'&&window.__scene.overlays&&!window.__scene.bottomInset),'recipient opens with the original full-screen intro and no timeline');
+ await recipient.bringToFront();await recipient.waitForFunction(()=>document.hasFocus());await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();await recipient.waitForFunction(()=>!window.__player.audio.paused&&window.__player.audio.currentTime>.05);
+ check(await recipient.evaluate(()=>window.__player.state==='playing'),'tapping the artwork starts the real recipient audio');
  await recipient.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true})));
  check(await recipient.evaluate(()=>!window.__player.destroyed&&window.__player.state==='paused'),'browser back-cache does not dispose the recipient player');
  await recipient.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
