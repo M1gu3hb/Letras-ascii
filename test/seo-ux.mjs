@@ -36,6 +36,8 @@ try{
   release();await ready(slow);ok(true,'font metrics are finalized after all font requests settle, including failures');
  }finally{release();await slowContext.close()}
 
+ const probe=await browser.newPage({isMobile:true,hasTouch:true});await probe.setContent('<a id="native-start" tabindex="0" href="#native-region">Skip</a><section id="native-region" tabindex="-1"><button id="implicit">Implicit</button><button id="explicit" tabindex="0">Explicit</button></section>');await probe.bringToFront();await probe.waitForFunction(()=>document.hasFocus());await probe.locator('#native-start').press('Enter');await focused(probe,'#native-region');await probe.keyboard.press('Tab');await probe.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const eligibility=await probe.evaluate(()=>({active:document.activeElement.id,focus:document.hasFocus()}));console.log((process.env.GITHUB_ACTIONS?'::notice title=Native keyboard eligibility::':'Native keyboard eligibility ')+JSON.stringify({kind,...eligibility}));await probe.close();
  const devices=[['phone-320',320,568,true],['phone-390',390,700,true],['phone-land',844,390,true],['tablet-p',768,1024,true],['tablet-l',1180,820,true],['small-desktop',1024,680,false],['desktop',1440,900,false],['reflow-200',720,450,false]];
  for(const [name,width,height,touch]of devices){
   const context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch,acceptDownloads:true});
@@ -83,6 +85,8 @@ try{
    const panelHeight=await page.locator('.panel').evaluate(el=>el.clientHeight);await view.click();ok(await page.locator('.panel').evaluate(el=>el.clientHeight)>panelHeight,'tablet-p: folding preview returns space to editing');
   }
   await page.getByRole('button',{name:'Siguiente: Exportar',exact:true}).click();
+  await page.getByRole('tabpanel').focus();await page.keyboard.press('Tab');await page.keyboard.press('Tab');await focused(page,'.pane:not([hidden]) > .row .primary');
+  ok(await page.getByRole('button',{name:'Descargar el HTML',exact:true}).evaluate(el=>el===document.activeElement),`${name}: Download is reachable through the native keyboard order`);
   await page.screenshot({path:`${folder}/export-${name}-${kind}.png`});
   ok(await within(page.getByRole('button',{name:'Descargar el HTML',exact:true})),`${name}: download is reachable without a hidden overlay`);
   if(name==='phone-390'){

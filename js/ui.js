@@ -1,6 +1,9 @@
 // Pequeñas piezas de interfaz sin dependencias.
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
+  // Explicit eligibility also covers Safari's restricted default keyboard mode.
+  // Preserve negative indices used by roving tabs and the hidden file picker.
+  if (['button', 'input', 'select', 'textarea', 'a', 'summary'].includes(tag) && !('tabindex' in (attrs || {})) && attrs?.type !== 'hidden') el.tabIndex = 0;
   for (const [k, v] of Object.entries(attrs || {})) {
     if (k === 'class') el.className = v;
     else if (k === 'html') el.innerHTML = v;

@@ -56,6 +56,6 @@ export function crawlerFiles() {
   return {
     'robots.txt': `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}sitemap.xml\n`,
     'sitemap.xml': `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}</loc></url></urlset>\n`,
-    '404.html': `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Página no encontrada | Letras en ASCII</title><link rel="stylesheet" href="/app.css"></head><body><main class="boot-intro"><h1>No encontramos esa página</h1><p>Vuelve al editor para continuar con tu canción. Tus proyectos guardados siguen en este navegador.</p><a class="btn primary" href="/">Volver al editor</a></main></body></html>\n`,
+    '404.html': `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Página no encontrada | Letras en ASCII</title><link rel="stylesheet" href="/app.css"></head><body><main class="boot-intro"><h1>No encontramos esa página</h1><p>Vuelve al editor para continuar con tu canción. Tus proyectos guardados siguen en este navegador.</p><a class="btn primary" tabindex="0" href="/">Volver al editor</a></main></body></html>\n`,
   };
 }
