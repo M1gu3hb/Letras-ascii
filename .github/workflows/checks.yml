@@ -34,6 +34,23 @@ jobs:
       - run: npm ci
       - run: npx playwright-core install --with-deps webkit
       - run: npm run build
-      - run: timeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries
+      - name: WebKit regression suites
+        run: |
+          set +e
+          timeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
+          test_status=${PIPESTATUS[0]}
+          exit "$test_status"
         env:
           PLAYWRIGHT_BROWSER: webkit
+      - name: Report WebKit failure context
+        if: failure()
+        run: |
+          node --input-type=module <<'NODE'
+          import {existsSync, readFileSync} from 'node:fs';
+          const path='/tmp/letras-webkit-checks.log';
+          if(existsSync(path)) {
+            const tail=readFileSync(path,'utf8').trim().split('\n').slice(-35).join('\n');
+            const escaped=tail.replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A');
+            console.error('::error title=WebKit last test output::'+escaped);
+          }
+          NODE
