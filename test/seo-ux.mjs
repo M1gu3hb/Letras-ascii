@@ -43,7 +43,7 @@ try{
   ok(await within(page.getByRole('button',{name:'Guía de uso',exact:true})),`${name}: help is visible and at least 44px`);
   ok(await page.getByRole('heading',{level:1}).count()===1,`${name}: runtime retains one H1`);
   if(name==='phone-land'||name==='reflow-200')ok(await page.locator('.panel').evaluate(el=>el.clientWidth>=innerWidth*.85),`${name}: a folded preview returns the full width to editing`);
-  await page.keyboard.press('Tab');ok(await page.getByRole('link',{name:'Saltar al paso actual'}).evaluate(el=>el===document.activeElement),`${name}: keyboard can skip repeated navigation`);
+  await page.keyboard.press('Tab');ok(await page.getByRole('link',{name:'Saltar al paso actual'}).evaluate(el=>el===document.activeElement),`${name}: keyboard can skip repeated navigation; active=${await page.evaluate(()=>document.activeElement.outerHTML.slice(0,160))}`);
   await page.keyboard.press('Enter');ok(await page.getByRole('tabpanel').evaluate(el=>el===document.activeElement),`${name}: skip link focuses the active panel`);
   const projectName=page.getByRole('textbox',{name:'Nombre del proyecto'});await projectName.focus();
   ok(await projectName.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'),`${name}: project name has a visible keyboard focus indicator`);
