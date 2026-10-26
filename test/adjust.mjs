@@ -54,7 +54,9 @@ try{
   check(true,`${width}: duration and exact undo/redo work with the preview collapsed`);
   await page.getByRole('button',{name:'Ver la frase completa',exact:true}).click();
   const beforeCancel=await snapshot();
+  await block.scrollIntoViewIfNeeded();
   const bounds=await block.boundingBox(),from={x:bounds.x+bounds.width*.3,y:bounds.y+bounds.height*.5};
+  assert.ok(await block.evaluate((el,point)=>el.contains(document.elementFromPoint(point.x,point.y)),from),'cancelled gesture starts on the visible word');
   if(touch&&(process.env.PLAYWRIGHT_BROWSER||'chromium')==='chromium'){
    const cdp=await context.newCDPSession(page);
    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...from,id:1}]});
