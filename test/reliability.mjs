@@ -37,9 +37,11 @@ try {
  await page.evaluate(async()=>{await window.__app.loadFile(new File([], 'empty.wav',{type:'audio/wav'}))});
  check(await page.evaluate(()=>JSON.stringify(window.__app.project))===before,'invalid media preserves the project');
  writeFileSync('site/recipient-test.html',html);
- const recipient=await context.newPage();watch(recipient,errors);await recipient.goto(`http://localhost:${port}/recipient-test.html`);await recipient.waitForFunction(()=>document.documentElement.classList.contains('ready'));
+ const recipient=await context.newPage();watch(recipient,errors);await recipient.goto(`http://localhost:${port}/recipient-test.html`);await recipient.bringToFront();await recipient.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  check(await recipient.getByRole('button',{name:'Reproducir',exact:true}).isVisible(),'recipient has an accessible play control');
- await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();await recipient.waitForFunction(()=>window.__player.state==='playing');
+ await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();
+ try{await recipient.waitForFunction(()=>window.__player.state==='playing'&&!window.__player.audio.paused&&window.__player.audio.currentTime>.05,null,{polling:100})}
+ catch(error){console.log('recipient audio diagnostic',JSON.stringify(await recipient.evaluate(()=>{const p=window.__player,a=p.audio;return{state:p.state,playError:p.lastPlayError,ready:a.readyState,paused:a.paused,seeking:a.seeking,position:a.currentTime,duration:a.duration,mediaError:a.error?.message,visibility:document.visibilityState}})));throw error}
  await recipient.getByRole('button',{name:'Pausar',exact:true}).click();check(await recipient.evaluate(()=>window.__player.state)==='paused','recipient play and pause control the real audio');
  await recipient.emulateMedia({reducedMotion:'reduce'});await recipient.waitForTimeout(100);check(await recipient.evaluate(()=>window.__scene.R.reduced),'reduced motion reaches the canvas engine');
  await recipient.getByLabel('Posición en la canción').press('Home'); await recipient.getByLabel('Posición en la canción').press('ArrowRight');await recipient.screenshot({path:'test/audit/recipient-desktop.png'});
