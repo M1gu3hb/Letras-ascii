@@ -96,7 +96,7 @@ Los casos se buscaron siguiendo las transiciones del diagrama, no solo comproban
 | A33 | Desmontar mientras el guardado era lento dejaba audio y eventos activos. | El desmontaje esperaba primero a persistencia. Libera reproducción, gestos, timers, listeners y URLs antes de esperar el guardado. | `destroy-stops-before-storage-finishes`; remount en `reaudit` |
 | A34 | El exportado listaba frases sin marca o fuera del tramo y duplicaba ayudas del canvas con controles DOM. | La transcripción usaba el texto completo y seguían habilitados overlays antiguos. Se deriva de la timeline renderizable y se usan los controles DOM. El payload conserva todo para reimportación. | `recipient-transcript-matches-clip`, `reading`, recorrido de exportación |
 
-Además se retiró el renderizado antiguo de contexto/bolita que ya había sido sustituido por `TextLayer`, y el modo normal dejó de rasterizar sprites ASCII invisibles. Se mantienen las comprobaciones de píxeles, geometría y exportación. Lint incluye ahora todos los scripts y pruebas, la nueva suite se ejecuta en ambos jobs de CI, y se retiró `main: index.js`, que apuntaba a un archivo inexistente en este frontend privado.
+Además se retiró el renderizado antiguo de contexto/bolita que ya había sido sustituido por `TextLayer`, y el modo normal dejó de rasterizar sprites ASCII invisibles. Se mantienen las comprobaciones de píxeles, geometría y exportación. Lint incluye ahora todos los scripts y pruebas, la nueva suite se ejecuta en ambos jobs de CI, se fijó CI en Ubuntu 24.04 con acciones oficiales v6 ancladas por SHA y runtime Node 24, y se retiró `main: index.js`, que apuntaba a un archivo inexistente en este frontend privado.
 
 ## Mapa del código revisado
 
@@ -153,7 +153,7 @@ cp test/unit/audit.test.mjs "$audit_base/test/unit/"
 node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 22 fallos en la base
 ```
 
-Los resultados finales de las suites, revisión e integración se registran en el PR asociado. La aprobación requiere lint, unitarias, build y ambas tareas de CI en el mismo commit. La comprobación pública posterior contrasta los hashes de los tres assets principales con ese build y reproduce el HTML realmente descargado en un documento independiente con la red desconectada.
+Los resultados finales de las suites, revisión e integración se registran en el PR asociado. La primera ejecución de WebKit en CI detectó una carrera en el fixture del contador: asignaba un clip nuevo sin emitir su evento y leía el contador del clip anterior antes del rebuild diferido. La regresión se corrigió para editar el campo real de final de tramo y después comprobar la estadística; conserva la comparación estricta con los golpes analizados. No se relajó el resultado esperado ni se añadió un reintento. La aprobación requiere lint, unitarias, build y ambas tareas de CI en el mismo commit. La comprobación pública posterior contrasta los hashes de los tres assets principales con ese build y reproduce el HTML realmente descargado en un documento independiente con la red desconectada.
 
 ## Límites
 

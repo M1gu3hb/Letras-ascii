@@ -98,7 +98,8 @@ try{
   assert.equal(await page.locator('[aria-label="Qué tan al azar cambian letras y animaciones"]').inputValue(),'0.15');
  });
  await check('real-beat-count',async()=>{
-  await fixture('style');const result=await page.evaluate(()=>{const a=window.__app,e=a.media.energy,c=a.clip();return{hits:[...e.hit.slice(Math.floor(c.start*e.fps),Math.ceil(c.end*e.fps))].filter(Boolean).length,stats:a.panels.style.stats.textContent}});
+  await fixture('song');const end=page.getByRole('textbox',{name:'Termina en',exact:true});await end.fill('0:25.00');await end.press('Tab');await page.locator('#tab-style').click();
+  const result=await page.evaluate(()=>{const a=window.__app,e=a.media.energy,c=a.clip();return{hits:[...e.hit.slice(Math.floor(c.start*e.fps),Math.ceil(c.end*e.fps))].filter(Boolean).length,stats:a.panels.style.stats.textContent}});
   assert.ok(result.hits>0);assert.ok(result.stats.startsWith(`${result.hits} golpes`),JSON.stringify(result));
  });
  await check('manual-effects-keyboard-state',async()=>{
