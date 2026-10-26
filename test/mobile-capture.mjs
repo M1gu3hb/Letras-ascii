@@ -30,7 +30,7 @@ async function close(page,context){
 async function fill(page,fmt){
  await page.getByRole('button',{name:'Más controles',exact:true}).tap();await page.getByLabel('Forma de la pantalla',{exact:true}).selectOption(fmt);await page.getByRole('button',{name:'Más controles',exact:true}).tap();
  await page.locator('#tab-text').tap();await page.locator('.lyrics').fill('Música contigo\nToca ahora\nÚltima frase');
- if((await page.viewportSize()).width<=600)check(await page.locator('.step-footer').evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-innerHeight)<2),'text editing uses the remaining screen instead of leaving an empty grid row');
+ if((await page.viewportSize()).width<=600){await page.waitForFunction(()=>Math.abs(document.querySelector('.step-footer').getBoundingClientRect().bottom-innerHeight)<2);check(await page.locator('.step-footer').evaluate(el=>Math.abs(el.getBoundingClientRect().bottom-innerHeight)<2),'text editing uses the remaining screen instead of leaving an empty grid row');}
  await page.getByRole('button',{name:'Siguiente: Marcar',exact:true}).tap();
  check(await page.evaluate(()=>window.__app.tab==='mark'),'one real touch continues from text ('+fmt+')');
 }

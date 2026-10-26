@@ -33,6 +33,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright-core install --with-deps webkit
+      - name: Virtual audio output
+        run: |
+          sudo apt-get install --no-install-recommends -y pulseaudio pulseaudio-utils gstreamer1.0-pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=letras_ci rate=44100 channels=2
+          pactl set-default-sink letras_ci
       - run: npm run build
       - name: WebKit regression suites
         run: |
