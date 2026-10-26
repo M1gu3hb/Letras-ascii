@@ -9,7 +9,7 @@ export function limitsClip(self, src, k) {
     const flat = [];
     for (const l of tl.lines) for (const w of l.words) flat.push({ src: l.src, k: w.k, on: w.onset });
     const i = flat.findIndex((x) => x.src === src && x.k === k);
-    return { lo: i > 0 ? flat[i - 1].on : 0, hi: i >= 0 && i < flat.length - 1 ? flat[i + 1].on : dur };
+    return { lo: Math.max(-GAP, i > 0 ? flat[i - 1].on : -GAP), hi: Math.min(dur + GAP, i >= 0 && i < flat.length - 1 ? flat[i + 1].on : dur + GAP) };
 }
 
 export function absNow(self) {
@@ -52,9 +52,8 @@ export function ensureWordLevel(self, src) {
     const n = ph.words.length;
     const s = p.sync[src];
     if (s && Array.isArray(s.wt) && s.wt.length === n && s.wt.every(Number.isFinite)) {
-      if (!Array.isArray(s.wd)) s.wd = [];
-      while (s.wd.length < n) s.wd.push(0.2);
-      return s;
+      if (Array.isArray(s.wd) && s.wd.length >= n) return s;
+      return { ...s, wt: s.wt.slice(), wd: Array.from({ length: n }, (_, k) => s.wd?.[k] ?? .2) };
     }
     const line = self.line(src);
     if (!line) {
@@ -66,8 +65,7 @@ export function ensureWordLevel(self, src) {
     const hm = self.holdMin();
     const wt = line.words.map((w) => r3(w.onset + clip0 - off));
     const wd = line.words.map((w) => r3(Math.max(0.1, Math.min(w.dur || 0.2, hm - 0.05))));
-    p.sync[src] = { t: wt[0], wt, wd };
-    return p.sync[src];
+    return { t: wt[0], wt, wd };
 }
 
 export function limitsAbs(self, src, k, s) {
@@ -123,6 +121,7 @@ export function setStartAbs(self, src, k, tAbs, replay = true) {
     }
     s.wt[k] = t;
     s.t = s.wt[0];
+    self.app.project.sync[src] = s;
     self.afterTime(src, k, replay);
     return true;
 }
@@ -145,6 +144,7 @@ export function setLen(self, src, k, len, replay = true) {
     if (len > cap + 0.004 && Math.abs(v - (s.wd[k] || 0)) < 1e-6) self.limitToast();
     if (Math.abs(v - (s.wd[k] || 0)) < 1e-6) return false;
     s.wd[k] = v;
+    self.app.project.sync[src] = s;
     self.afterTime(src, k, replay);
     return true;
 }
@@ -201,6 +201,7 @@ export function nudgePhrase(self, dt) {
     }
     s.wt = s.wt.map((x) => r3(Math.max(0, x + d)));
     s.t = s.wt[0];
+    self.app.project.sync[src] = s;
     self.afterTime(src, self.sel.k);
 }
 
@@ -249,7 +250,7 @@ export function afterTime(self, src, k, replay = true) {
         if (!w) return;
         w.on = Math.max(0, t - clip0 + off);
         const len = q.wd && q.wd[kk] != null ? q.wd[kk] : 0.2;
-        w.len = Math.max(0.08, len);
+        w.len = Math.max(0.05, len);
         w.held = len >= hm;
       });
     }

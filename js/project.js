@@ -49,6 +49,11 @@ export const HOLD_LABELS = { bob: 'Rebotar', wave: 'Ola', sway3d: 'Girar 3D', br
 export const EXIT_LABELS = { dissolve: 'Disolver', defrag: 'Desfragmentar', sink3d: 'Hundir 3D', wipe: 'Borrar', fall: 'Caer' };
 export const WORDFX_LABELS = { glow: 'Brillo', blink: 'Parpadeo', explode: 'Explosión', defrag: 'Desfragmentar' };
 export const FILL_LABELS = { auto: 'Automático', edge: 'Bordes y @', self: 'Con sus letras', classic: 'Clásico' };
+export const MAX_LYRIC_CHARS = 100000;
+export function validateLyrics(text) {
+  if (text.length > MAX_LYRIC_CHARS) throw new Error(`La letra supera el límite de ${MAX_LYRIC_CHARS} caracteres. Usa una letra o un fragmento más corto.`);
+  return text;
+}
 
 export function defaultStyle() {
   return {
@@ -136,7 +141,7 @@ export function normalize(p) {
   for (const [key, lo, hi] of [['entryMs',0,3000],['karaokeSize',.75,2],['karaokeDetail',.75,1.5],['karaokeContrast',.6,1.5]]) out.style[key] = Number.isFinite(out.style[key]) ? Math.max(lo, Math.min(hi, out.style[key])) : d.style[key];
   if (typeof out.style.karaokeOn !== 'boolean') out.style.karaokeOn = true;
   out.style.randomGroups = (Array.isArray(out.style.randomGroups) ? out.style.randomGroups : d.style.randomGroups).filter(x => ['faces','colors','backgrounds','animations'].includes(x));
-  out.text = typeof p.text === 'string' ? p.text.slice(0, 100000) : '';
+  out.text = typeof p.text === 'string' ? validateLyrics(p.text) : '';
   for (const key of ['name', 'intro', 'outro']) out[key] = typeof out[key] === 'string' ? out[key].slice(0, key === 'name' ? 60 : 200) : d[key];
   out.style.faces = (Array.isArray(out.style.faces) ? out.style.faces : []).filter((f) => FACE_NAMES.includes(f));
   if (!out.style.faces.length) out.style.faces = FACE_NAMES.slice();
@@ -247,23 +252,22 @@ export function syncedCount(project) {
   return { done: k, total: n };
 }
 
-export const fmtTime = (t) => {
-  if (!Number.isFinite(t)) return '0:00';
-  const m = Math.floor(t / 60);
-  const s = Math.floor(t % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
-};
-export const fmtTimeMs = (t) => {
-  const m = Math.floor(t / 60);
-  const s = t - m * 60;
-  return `${m}:${s.toFixed(2).padStart(5, '0')}`;
-};
+function formatTime(t, precision, round) {
+  if (!Number.isFinite(t)) t = 0;
+  const factor = 10 ** precision, units = (round ? Math.round : Math.floor)(Math.abs(t) * factor);
+  const minutes = Math.floor(units / (60 * factor)), seconds = (units % (60 * factor)) / factor;
+  return `${t < 0 ? '-' : ''}${minutes}:${seconds.toFixed(precision).padStart(precision ? precision + 3 : 2, '0')}`;
+}
+export const fmtTime = t => formatTime(t, 0, false);
+export const fmtTimeMs = t => formatTime(t, 2, true);
+export const fmtRuler = (t, step) => formatTime(t, step >= 1 ? 0 : Number.isInteger(step * 10) ? 1 : 2, true);
 
 export function parseClock(s) {
   const t = String(s).trim().replace(',', '.');
-  if (!t) return NaN;
+  if (!/^(?:\d+(?::\d{1,2}){0,2}(?:\.\d+)?|\.\d+)$/.test(t)) return NaN;
   const p = t.split(':').map(Number);
   if (p.some((x) => !Number.isFinite(x))) return NaN;
+  if (p.slice(1).some(x => x >= 60)) return NaN;
   return p.length === 1 ? p[0] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 3600 + p[1] * 60 + p[2];
 }
 

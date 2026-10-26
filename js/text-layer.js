@@ -1,7 +1,7 @@
 // Letras vectoriales y karaoke comparten medidas, páginas y coordenadas de la bolita.
 // Solo se mide/rasteriza al construir el layout, nunca dentro del RAF.
 import { fontStr } from './type.js';
-import { clamp } from './util.js';
+import { clamp, graphemes } from './util.js';
 const colors = { white:'#fff',cream:'#ffecde',blush:'#ffc4c4',rose:'#ff7096',pink:'#ff4fd8',ruby:'#e0245e',orange:'#ff8a3d',amber:'#ffb26c',gold:'#ffd75e',mint:'#7dffc4',cyan:'#4fe3ff',ice:'#cfeeff',violet:'#9a7bff',lav:'#c3b4ee' };
 
 export class TextLayer {
@@ -16,7 +16,7 @@ export class TextLayer {
   }
   layout() {
     const s=this.scene,r=s.r,tl=s.tl,st=tl.style;
-    this.style=st; this.hero=[]; this.karaoke=[];
+    this.style=st; this.hero=[]; this.karaoke=[]; this.band=null; this.ball=null; this.visibleKaraoke=null;
     const containers=tl.focus==='word'?tl.units:tl.lines;
     for(const line of containers) for(const w of line.words) {
       if(w.renderMode!=='normal') continue;
@@ -24,8 +24,10 @@ export class TextLayer {
       let size=Math.max(10,w.Hb*r.cellH*.8);
       this.measure.font=fontStr(w.face,size);
       const width=this.measure.measureText(text).width;
-      size*=Math.min(1,(w.Wb*r.cellW*.94)/Math.max(1,width));
-      this.hero.push({line,w,text,size,x:(w.gx+w.Wb/2)*r.cellW,y:(w.gy+w.Hb/2)*r.cellH+r.offY});
+      const scale=Math.min(1,Math.min(w.Wb*r.cellW*.94,r.W-16)/Math.max(1,width));
+      size*=scale;
+      const half=width*scale/2;
+      this.hero.push({line,w,text,size,x:clamp((w.gx+w.Wb/2)*r.cellW,8+half,r.W-8-half),y:(w.gy+w.Hb/2)*r.cellH+r.offY});
     }
     if(st.karaokeOn===false) return;
     const {size,lineHeight,padding,band,top}=this.geometry();
@@ -37,16 +39,18 @@ export class TextLayer {
       const rows=[[]]; let used=0;
       const space=this.measure.measureText(' ').width;
       for(const w of line.words) {
-        const pieces=[];let part='';
-        for(const char of w.text) {
-          if(part && this.measure.measureText(part+char).width>width) {pieces.push(part);part='';}
-          part+=char;
+        const pieces=[],chars=graphemes(w.text);let part='',count=0;
+        for(const char of chars) {
+          if(part && this.measure.measureText(part+char).width>width) {pieces.push({text:part,count});part='';count=0;}
+          part+=char;count++;
         }
-        if(part)pieces.push(part);
-        for(const text of pieces) {
+        if(part)pieces.push({text:part,count});
+        let consumed=0;const sung=Math.max(.05,w.sung||w.dur);
+        for(const {text,count} of pieces) {
           const measured=this.measure.measureText(text).width;
           if(used && used+space+measured>width){rows.push([]);used=0;}
-          rows.at(-1).push({text,k:w.k,onset:w.onset,dur:Math.max(.05,w.sung||w.dur),width:measured,size,font,face});
+          rows.at(-1).push({text,k:w.k,onset:w.onset+sung*consumed/chars.length,dur:sung*count/chars.length,width:measured,size,font,face});
+          consumed+=count;
           used+=(used?space:0)+measured;
         }
       }
@@ -124,7 +128,7 @@ export class TextLayer {
     const words=item.line.words;
     let cursor=-1;for(let k=0;k<words.length;k++)if(words[k].onset<=t)cursor=k;
     const active=cursor>=0&&t<words[cursor].onset+Math.max(.05,words[cursor].sung||words[cursor].dur)?cursor:-1;
-    const page=item.pages.find(p=>p.some(w=>w.k===cursor))||item.pages[0];
+    const page=item.pages.filter(p=>p.some(w=>w.k===cursor&&w.onset<=t)).at(-1)||item.pages.find(p=>p.some(w=>w.k===cursor))||item.pages[0];
     return {item,active,page};
   }
   drawKaraoke(ctx,t) {
@@ -142,9 +146,9 @@ export class TextLayer {
       else{ctx.font=w.font;ctx.fillText(w.text,w.x,w.y);}
       if(current){ctx.globalAlpha=1;ctx.fillStyle='#ffb6cf';ctx.fillRect(w.x,w.y+w.size*1.12,Math.max(2,w.width),Math.max(2,w.size*.08));}
     }
-    const current=page.find(w=>w.k===active);
+    const current=page.filter(w=>w.k===active&&w.onset<=t).at(-1)||page.find(w=>w.k===active);
     if(current&&this.scene.ballOn){
-      const progress=clamp((t-current.onset)/Math.max(.05,current.dur));
+      const progress=clamp((t-current.onset)/Math.max(.001,current.dur));
       const x=current.x+current.width*(this.scene.R.reduced ? .5 : progress),y=current.y-5-(this.scene.R.reduced?0:Math.sin(progress*Math.PI)*5);
       this.ball={x,y,k:active};ctx.globalAlpha=1;ctx.beginPath();ctx.arc(x,y,Math.max(2,current.size*.12),0,Math.PI*2);ctx.fillStyle='#ffb6cf';ctx.fill();
     }else this.ball=null;
@@ -153,7 +157,7 @@ export class TextLayer {
   draw(t,mode) {
     const r=this.scene.r,ctx=r.ctx;
     ctx.save();ctx.setTransform(r.dpr,0,0,r.dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.shadowBlur=0;ctx.filter='none';
-    if(mode==='song'||mode==='ended'){this.drawHero(ctx,t);if(this.style.karaokeOn!==false)this.drawKaraoke(ctx,t);}
+    if(mode==='song'){this.drawHero(ctx,t);if(this.style.karaokeOn!==false)this.drawKaraoke(ctx,t);}
     ctx.restore();
   }
 }

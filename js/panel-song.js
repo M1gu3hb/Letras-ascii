@@ -59,7 +59,7 @@ export class SongPanel {
         toast('Usa tiempos válidos: inicio menor que final, dentro de la canción. Ejemplo: 1:23.50.', 'bad');
         this.paintRange(c.start, c.end); return;
       }
-      if (e - s < 3) e = Math.min(m.dur, s + 3);
+      if (e - s < 1 - 1e-6) { toast('El tramo debe durar al menos un segundo.', 'bad'); this.paintRange(c.start, c.end); return; }
       app.setClip(s, e);
     };
     this.startIn.addEventListener('change', commit);
@@ -70,8 +70,8 @@ export class SongPanel {
         if (!m) return;
         const t = this.cursor();
         const c = app.clip();
-        if (which === 'start') app.setClip(Math.min(t, c.end - 3), Math.max(c.end, t + 3));
-        else app.setClip(Math.min(c.start, t - 3), t);
+        if (which === 'start') app.setClip(Math.min(t, c.end - 1), Math.max(c.end, t + 1));
+        else app.setClip(Math.min(c.start, t - 1), t);
       } }, which === 'start' ? 'Empieza aquí' : 'Termina aquí');
     this.rangeBox = h(
       'div',
@@ -93,6 +93,8 @@ export class SongPanel {
       this.paintRange(c.start, c.end);
     });
     app.on('reset', () => this.refresh());
+    app.on('tab', () => { if (app.tab !== 'song') this.wave.cancelGesture(); });
+    app.scope.listen(window, 'blur', () => this.wave.cancelGesture());
     app.on('project', () => this.paintMarks());
     app.on('rebuilt', () => this.paintMarks());
     app.on('tick', () => this.tick());
@@ -115,7 +117,7 @@ export class SongPanel {
 
   seekFull(t) {
     const a = this.app.audioFull;
-    this.wave.cursor = t;
+    this.wave.setCursor(t);
     if (a.src) {
       try {
         a.currentTime = t;
@@ -143,6 +145,7 @@ export class SongPanel {
 
   testClip() {
     const app = this.app;
+    app.preparePlayback();
     app.audioFull.pause();
     app.player.start(0);
   }

@@ -1,9 +1,10 @@
 // Modal focus containment and restoration; the rest of the editor becomes inert.
 export function modalDialog(dialog, background, opener = document.activeElement) {
   const wasInert = background?.inert;
+  let closed = false;
   if (background) background.inert = true;
   const focusable = () => [...dialog.querySelectorAll('button:not([disabled]), input, select, textarea, a[href], [tabindex="0"]')].filter((e) => e.offsetParent);
-  const close = () => { dialog.remove(); if (background) background.inert = !!wasInert; if (opener?.isConnected) opener.focus({ preventScroll: true }); };
+  const close = () => { if (closed) return; closed = true; dialog.remove(); if (background) background.inert = !!wasInert; if (opener?.isConnected) opener.focus({ preventScroll: true }); };
   dialog.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') { event.stopPropagation(); close(); }
     if (event.key === 'Tab') {

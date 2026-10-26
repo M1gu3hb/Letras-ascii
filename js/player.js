@@ -15,6 +15,7 @@ export class Player {
     this.dur = 0;
     this.virtual = true;
     this.vT = 0;
+    this.seekTarget = null;
     this.vStamp = 0;
     this.rate = 1;
     this.loopClip = false;
@@ -30,8 +31,12 @@ export class Player {
     this.demoDur = 0;
     this.demoFrom = 0;
     audio.addEventListener('ended', () => {
-      if (this.state === 'playing') this.finish();
+      if (this.state !== 'playing') return;
+      if (this.auditionRange?.loop) void this.start(this.auditionRange.a);
+      else if (this.auditionRange) { this.pause(); this.seek(this.auditionRange.b); }
+      else this.finish();
     }, { signal: this.scope.signal });
+    audio.addEventListener('seeked', () => { if (!audio.seeking) { this.seekTarget = null; this.lastCT = -1; } }, { signal: this.scope.signal });
     if (mode === 'player') {
       const act = (e) => {
         if (e.type === 'keydown') {
@@ -51,6 +56,7 @@ export class Player {
 
   // url: audio del tramo (WAV o el original); sin url = reloj virtual de `dur` segundos
   setSource(url, dur) {
+    this.seekTarget = null;
     this.auditionRange = null;
     this.playEpoch = (this.playEpoch || 0) + 1;
     const a = this.audio;
@@ -58,14 +64,16 @@ export class Player {
     this.virtual = !url;
     this.lastCT = -1;
     this.vT = 0;
+    this.t = 0;
     if (this.state === 'playing') this.setState('paused');
     try {
       a.pause();
     } catch (e) {}
+    this.cancelPreparation();
     if (url) {
       a.src = url;
       a.load();
-    } else a.removeAttribute('src');
+    } else { a.removeAttribute('src'); a.load(); }
   }
 
   setState(s) {
@@ -86,17 +94,25 @@ export class Player {
 
   async prepareGesture() {
     if (this.virtual) return true;
-    const audio = this.audio, epoch = this.playEpoch, muted = audio.muted;
+    this.cancelPreparation();
+    const audio = this.audio, epoch = this.playEpoch;
+    const preparation = this.gesturePreparation = { muted: audio.muted };
     // Unlock this exact media element while the Start tap is still active.
     // A timer at the end of a countdown has no user gesture on mobile Safari.
     audio.muted = true;
     try {
       await audio.play();
-      if (this.destroyed || epoch !== this.playEpoch) return false;
+      if (this.destroyed || epoch !== this.playEpoch || this.gesturePreparation !== preparation) return false;
       audio.pause();
       return true;
     } catch { return false; }
-    finally { audio.muted = muted; }
+    finally { if (this.gesturePreparation === preparation) this.cancelPreparation(); }
+  }
+
+  cancelPreparation() {
+    if (!this.gesturePreparation) return;
+    this.audio.muted = this.gesturePreparation.muted;
+    this.gesturePreparation = null;
   }
 
   async start(from = 0) {
@@ -108,6 +124,7 @@ export class Player {
   }
 
   async resumeClock() {
+    this.cancelPreparation();
     const epoch = this.playEpoch = (this.playEpoch || 0) + 1;
     this.lastCT = -1;
     this.audio.volume = 1;
@@ -131,6 +148,7 @@ export class Player {
     this.playEpoch = (this.playEpoch || 0) + 1;
     if (this.state === 'playing') this.vT = this.time(performance.now() / 1000);
     if (!this.virtual) this.audio.pause();
+    this.cancelPreparation();
     this.setState('paused');
   }
   resume() {
@@ -142,6 +160,7 @@ export class Player {
   stop() {
     this.playEpoch = (this.playEpoch || 0) + 1;
     this.audio.pause();
+    this.cancelPreparation();
     this.seek(0);
     this.setState(this.mode === 'player' ? 'intro' : 'paused');
   }
@@ -152,9 +171,11 @@ export class Player {
     this.vStamp = performance.now() / 1000;
     this.lastCT = -1;
     if (!this.virtual) {
+      this.audio.volume = 1;
+      this.seekTarget = this.audio.readyState > 0 && (this.audio.seeking || Math.abs(this.audio.currentTime - tt) > 1e-6) ? tt : null;
       try {
         this.audio.currentTime = tt;
-      } catch (e) {}
+      } catch (e) { this.seekTarget = null; }
     }
     this.t = tt;
   }
@@ -198,12 +219,13 @@ export class Player {
   }
 
   releaseAwake() { const wake = this.wake; this.wake = null; if (wake) Promise.resolve(wake.release()).catch(() => {}); }
-  destroy() { this.destroyed = true; this.playEpoch = (this.playEpoch || 0) + 1; cancelAnimationFrame(this.raf); this.scope.abort(); this.audio.pause(); this.audio.removeAttribute('src'); this.audio.load(); this.releaseAwake(); }
+  destroy() { this.destroyed = true; this.playEpoch = (this.playEpoch || 0) + 1; cancelAnimationFrame(this.raf); this.scope.abort(); this.audio.pause(); this.cancelPreparation(); this.audio.removeAttribute('src'); this.audio.load(); this.releaseAwake(); }
 
   // tiempo del tramo, interpolado entre actualizaciones del audio
   time(now) {
     if (this.virtual) return this.state === 'playing' ? this.vT + (now - this.vStamp) * this.rate : this.vT;
     const a = this.audio;
+    if (this.seekTarget != null) return this.seekTarget;
     const ct = a.currentTime;
     if (ct !== this.lastCT) {
       this.lastCT = ct;
@@ -230,10 +252,10 @@ export class Player {
       if (range.loop) { this.seek(range.a); t = range.a; }
       else { this.pause(); this.seek(range.b); t = range.b; }
     }
-    if (this.state === 'playing' && this.dur && t >= this.dur - 0.01) {
+    if (this.state === 'playing' && !range && this.dur && t >= this.dur - 0.01) {
       this.finish();
-      t = this.dur;
-    } else if (this.state === 'playing' && !this.virtual && this.dur && t > this.dur - 0.25) this.audio.volume = Math.max(0, (this.dur - t) / 0.25);
+      t = this.mode === 'studio' ? this.t : this.dur;
+    } else if (this.state === 'playing' && !range && !this.virtual && this.dur && t > this.dur - 0.25) this.audio.volume = Math.max(0, (this.dur - t) / 0.25);
     this.t = t;
     return t;
   }

@@ -57,6 +57,7 @@ export class MarkPanel {
     // barra espaciadora = el botón grande. Se cancela también al soltar para que un botón con foco no se «pulse» solo.
     const typing = (tg) => tg && tg.closest && tg.closest('textarea, input:not([type=range]), select, [contenteditable]');
     app.scope.listen(window, 'keydown', (e) => {
+      if (e.defaultPrevented || app.destroyed || app.root.inert || app.grid.inert) return;
       if (this.app.tab !== 'mark' || this.app.theaterOn) return;
       if (e.code === 'Escape') {
         if (this.cd) return this.cancelCount();

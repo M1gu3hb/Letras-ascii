@@ -17,6 +17,7 @@ export class EditHistory {
     app.scope.listen(window, 'pointercancel', () => queueMicrotask(() => this.cancel()));
     app.scope.listen(window, 'blur', () => this.cancel());
     app.scope.listen(window, 'keydown', e => {
+      if (e.defaultPrevented || app.destroyed || app.root.inert || app.grid?.inert) return;
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.target.closest('input, textarea, select, [contenteditable]')) return;
       if (e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? this.redo() : this.undo(); }
       else if (e.key.toLowerCase() === 'y') { e.preventDefault(); this.redo(); }
@@ -36,12 +37,13 @@ export class EditHistory {
   begin() { if (!this.batch) { this.record(); this.batch = snapshot(this.app); } }
   commit() {
     if (!this.batch) return;
+    if (this.key !== this.context()) { this.reset(); return; }
     const before = this.batch; this.batch = null;
     this.current = snapshot(this.app);
     if (!equal(before, this.current)) { this.past.push(before); this.past = this.past.slice(-80); this.future = []; }
     this.notify();
   }
-  cancel() { if (this.batch) { const before = this.batch; this.batch = null; this.apply(before); } }
+  cancel() { if (this.batch) { if (this.key !== this.context()) return this.reset(); const before = this.batch; this.batch = null; this.apply(before); } }
   apply(value) {
     this.applying = true;
     Object.assign(this.app.project, structuredClone(value));

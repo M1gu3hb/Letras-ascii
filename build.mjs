@@ -1,5 +1,5 @@
 // Arma el sitio estático en site/ : index.html + app.js + app.css + fonts/.
-// El mismo app.js y app.css se incrustan después en el HTML final que se descarga.
+// El reproductor player.js y app.css se incrustan en el HTML final que se descarga.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';

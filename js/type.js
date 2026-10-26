@@ -1,6 +1,6 @@
 // Tipografía -> cobertura por celda. Cada letra es un "sprite" rasterizado a 2x2 subceldas por celda,
 // para que los bordes se vean suaves aun siendo caracteres.
-import { clamp } from './util.js';
+import { clamp, graphemes } from './util.js';
 
 export const SS = 2; // subceldas por celda
 export const PADC = 1.5; // margen lateral de cada letra (en celdas)
@@ -79,7 +79,8 @@ export class Typo {
     this.mctx.font = fontStr(m.n, 100 * m.k);
     const base = (this.mctx.measureText(text).width / 100) * m.sq;
     const trk = track + thickTrackEm(m.n, thickQ(thick), m.k);
-    return trk && text.length > 1 ? base + trk * m.sq * (text.length - 1) : base;
+    const count = trk ? graphemes(text).length : 0;
+    return trk && count > 1 ? base + trk * m.sq * (count - 1) : base;
   }
   // celdas horizontales por em cuando el em mide F filas
   emCells(F) {
@@ -91,7 +92,7 @@ export class Typo {
     const fm = this.face(face);
     const radius = thickRadiusEm(fm.n, thickQ(thick)) * F * this.ch * fm.k;
     const pad = PADC + (radius > 0 ? Math.ceil(radius * fm.sq / this.cw) : 0);
-    const extra = wantStretch && /[oaeu]/i.test(text) ? maxExtra : 0;
+    const extra = wantStretch && /[oaeu]/i.test(text.normalize('NFD')) ? maxExtra : 0;
     return { width: Math.ceil(this.unitWidth(text, face, track, thick) * this.emCells(F) + extra + 2 * pad + 4), height: Math.ceil(F * 1.16) + 2 };
   }
 
@@ -176,19 +177,22 @@ export class Typo {
     const tq = thickQ(thick);
     const trk = track + thickTrackEm(fm.n, tq, fm.k);
     const tr = trk ? trk * em * fm.sq : 0;
-    const W = mw(text) + tr * Math.max(0, text.length - 1);
+    const clusters = graphemes(text);
+    const W = mw(text) + tr * Math.max(0, clusters.length - 1);
     const letters = [];
-    for (let i = 0; i < text.length; i++) {
-      const x = mw(text.slice(0, i));
-      const xe = mw(text.slice(0, i + 1));
-      letters.push({ ch: text[i], x: x + tr * i, adv: xe - x, sp: this.letterSprite(text[i], F, fm.n, thick) });
+    let prefix = '', previous = 0;
+    for (let i = 0; i < clusters.length; i++) {
+      prefix += clusters[i];
+      const xe = mw(prefix);
+      letters.push({ ch: clusters[i], x: previous + tr * i, adv: xe - previous, sp: this.letterSprite(clusters[i], F, fm.n, thick) });
+      previous = xe;
     }
     let pad = PADC;
     for (const L of letters) if (L.sp.pad > pad) pad = L.sp.pad;
     let stretchIdx = -1;
     if (wantStretch && maxExtra > 0) {
       for (const v of STRETCH_ORDER) {
-        const k = text.toLowerCase().indexOf(v);
+        const k = clusters.findIndex(char => char.normalize('NFD').toLowerCase().startsWith(v));
         if (k >= 0) {
           stretchIdx = k;
           break;

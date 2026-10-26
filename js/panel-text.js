@@ -1,6 +1,6 @@
 // Paso 2: la letra (la escribes o pegas tú), textos de inicio y final, e importar letras con tiempos.
 import { h, toast, field } from './ui.js';
-import { phrasesOf, reconcile, parseClock, normalize } from './project.js';
+import { phrasesOf, reconcile, parseClock, normalize, MAX_LYRIC_CHARS } from './project.js';
 import { parseTimed, readPayloadFromHtml, readFileText } from './import.js';
 
 export class TextPanel {
@@ -10,7 +10,7 @@ export class TextPanel {
       class: 'lyrics',
       rows: 12,
       spellcheck: 'false',
-      maxlength: 100000,
+      maxlength: MAX_LYRIC_CHARS,
       placeholder: 'Escribe o pega aquí la letra.\nUna frase por línea.\nLas líneas vacías se ignoran.',
       'aria-label': 'Letra de la canción',
     });
@@ -80,7 +80,7 @@ export class TextPanel {
     );
     this.ta.value = app.project.text;
     this.paintCount();
-    app.on('reset', () => this.refresh());
+    app.on('reset', () => { this.cancelImport(); this.refresh(); });
     app.on('project', () => this.paintUndo());
   }
 
@@ -123,14 +123,18 @@ export class TextPanel {
   startOffset(fallback = 0) {
     if (!this.startAt.value.trim()) return fallback;
     const v = parseClock(this.startAt.value);
-    return Number.isFinite(v) ? v : 0;
+    if (!Number.isFinite(v) || v < 0) throw new Error('El inicio del archivo no es válido. Usa segundos o un tiempo como 1:23.155.');
+    return v;
   }
+  cancelImport() { this.importController?.abort(); this.importController = null; }
+  beginImport() { this.cancelImport(); return this.importController = new AbortController(); }
+  destroy() { this.cancelImport(); }
 
   async importTimed() {
+    const controller = this.beginImport(), id = this.app.id;
     try {
-      const id = this.app.id;
-      const f = await readFileText('.lrc,.srt,.vtt,.txt');
-      if (this.app.destroyed || this.app.id !== id) return;
+      const f = await readFileText('.lrc,.srt,.vtt,.txt', { signal: controller.signal });
+      if (this.app.destroyed || this.app.id !== id || controller.signal.aborted) return;
       const rows = parseTimed(f.text, f.name);
       const off = this.startOffset();
       const p = this.app.project;
@@ -147,15 +151,15 @@ export class TextPanel {
       });
       toast(`Traje ${rows.length} frases con sus tiempos.`);
     } catch (e) {
-      if (e && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
-    }
+      if (e && e.name !== 'AbortError' && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
+    } finally { if (this.importController === controller) this.importController = null; }
   }
 
   async importOld() {
+    const controller = this.beginImport(), id = this.app.id;
     try {
-      const id = this.app.id;
-      const f = await readFileText('.html,.htm');
-      if (this.app.destroyed || this.app.id !== id) return;
+      const f = await readFileText('.html,.htm', { signal: controller.signal });
+      if (this.app.destroyed || this.app.id !== id || controller.signal.aborted) return;
       const d = readPayloadFromHtml(f.text);
       if (!d.lines.length) throw new Error('Ese archivo no contiene frases válidas.');
       const off = this.startOffset(d.sourceStart || 0);
@@ -180,8 +184,8 @@ export class TextPanel {
       });
       toast(`Traje ${d.lines.length} frases de tu archivo anterior.`);
     } catch (e) {
-      if (e && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
-    }
+      if (e && e.name !== 'AbortError' && e.message !== 'cancelado') toast(e.message || 'No pude leer ese archivo.', 'bad');
+    } finally { if (this.importController === controller) this.importController = null; }
   }
 
   clearSync() {

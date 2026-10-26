@@ -15,6 +15,7 @@ export class Audition {
     return { a: Math.max(0, start - this.before), b: Math.min(p.app.player.dur, end + this.after), loop: this.loop };
   }
   play(kind = 'word') {
+    this.panel.app.preparePlayback();
     const range = this.range(kind);
     if (!range || range.b <= range.a) return;
     const p = this.panel;

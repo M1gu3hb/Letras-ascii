@@ -14,7 +14,7 @@ export function adjustmentTools(panel) {
     panel.audition.loop = !panel.audition.loop; loop.setAttribute('aria-pressed', String(panel.audition.loop)); panel.audition.refresh();
   } }, 'A–B');
   loop.setAttribute('aria-label', 'Bucle A–B');
-  const speed = select([['.5','0.5×'],['.75','0.75×'],['1','1×']], '1', v => { app.player.setRate(+v); app.rateSel.value = v === '.5' ? '0.5' : v === '.75' ? '0.75' : '1'; }, 'Velocidad para corregir');
+  const speed = panel.speed = select([['.5','0.5×'],['.75','0.75×'],['1','1×']], app.player.rate === .5 ? '.5' : app.player.rate === .75 ? '.75' : '1', v => app.setRate(+v), 'Velocidad para corregir');
   const context = (label, key, value) => h('label', { class: 'context-field' }, label, h('input', { type: 'number', min: 0, max: 3, step: '.05', value, 'aria-label': label, onchange: e => {
     if (Number.isFinite(e.target.valueAsNumber)) panel.audition[key] = Math.max(0, Math.min(3, e.target.valueAsNumber));
     panel.audition.refresh();

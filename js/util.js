@@ -3,6 +3,8 @@
 
 export const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
 export const lerp = (a, b, t) => a + (b - a) * t;
+const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+export const graphemes = text => segmenter ? Array.from(segmenter.segment(text), part => part.segment) : Array.from(text);
 export const smooth = (a, b, x) => {
   const t = clamp((x - a) / (b - a));
   return t * t * (3 - 2 * t);

@@ -7,13 +7,13 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6, Node 24
         with:
           node-version: '24'
           cache: npm
@@ -21,19 +21,41 @@ jobs:
       - run: npx playwright-core install --with-deps chromium
       - run: npm test
   webkit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: macos-15
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
         with:
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6, Node 24
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright-core install --with-deps webkit
+      - run: npx playwright-core install webkit
+      - name: Timeout utility
+        run: |
+          if ! command -v gtimeout >/dev/null; then
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install coreutils
+          fi
       - run: npm run build
-      - run: timeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading
+      - name: WebKit regression suites
+        run: |
+          set +e
+          gtimeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
+          test_status=${PIPESTATUS[0]}
+          exit "$test_status"
         env:
           PLAYWRIGHT_BROWSER: webkit
+      - name: Report WebKit failure context
+        if: failure()
+        run: |
+          node --input-type=module <<'NODE'
+          import {existsSync, readFileSync} from 'node:fs';
+          const path='/tmp/letras-webkit-checks.log';
+          if(existsSync(path)) {
+            const tail=readFileSync(path,'utf8').trim().split('\n').slice(-35).join('\n');
+            const escaped=tail.replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A');
+            console.error('::error title=WebKit last test output::'+escaped);
+          }
+          NODE

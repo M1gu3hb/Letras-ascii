@@ -25,7 +25,7 @@ export function weightOf(text) {
 }
 
 export function canStretch(text) {
-  return /[aeou]/i.test(text);
+  return /[aeou]/i.test(text.normalize('NFD'));
 }
 
 export function tokenize(text) {
@@ -58,8 +58,9 @@ export function buildTimeline(model) {
       wd = Array.isArray(s.wd) ? s.wd.slice() : [];
     }
     const t = wt ? wt[0] : s.t - start + off;
-    if (t < -0.3 || t > duration - 0.6) return;
-    raw.push({ src, t: Math.max(0, t), text: p.text, words, wt, wd });
+    const intersects = wt?.some((onset, k) => onset < duration && onset + Math.max(.05, wd[k] || .5) > 0);
+    if (wt ? !intersects : t < -0.3 || t >= duration) return;
+    raw.push({ src, t: wt ? t : Math.max(0, t), text: p.text, words, wt, wd });
   });
   raw.sort((a, b) => a.t - b.t);
   for (let i = 1; i < raw.length; i++) if (!raw[i].wt && raw[i].t < raw[i - 1].t + 0.2) raw[i].t = raw[i - 1].t + 0.2;
@@ -77,8 +78,8 @@ export function buildTimeline(model) {
     let D;
     let lastEnd;
     if (wordMode) {
-      onsets = rl.wt.map((x) => Math.max(0, x));
-      for (let k = 1; k < n; k++) onsets[k] = Math.max(onsets[k], onsets[k - 1] + 0.06);
+      onsets = rl.wt.slice();
+      for (let k = 1; k < n; k++) onsets[k] = Math.max(onsets[k], onsets[k - 1]);
       const sungLast = rl.wd[n - 1] || 0;
       lastEnd = onsets[n - 1] + (sungLast >= heldMin ? sungLast : 0.5);
       D = Math.max(0.5, lastEnd - rl.t);
@@ -134,7 +135,7 @@ export function buildTimeline(model) {
 
   const focus = style.focus === 'line' ? 'line' : 'word';
   const units = focus === 'word' ? makeUnits(lines, model.over || {}, (style.randomGroups || ['animations']).includes('animations') ? model.seed || 0 : 0) : [];
-  resolveEntries({ lines, units, focus, style }, model.over || {});
+  resolveEntries({ lines, units, focus, style, duration }, model.over || {});
   const first = lines.length ? lines[0].t : 0;
   let lastHide = lines.length ? lines[lines.length - 1].hideAt : 0;
   for (const u of units) lastHide = Math.max(lastHide, u.hideAt);

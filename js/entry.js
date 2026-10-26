@@ -11,8 +11,8 @@ export function resolveEntries(timeline, over = {}) {
     for (let k = 0; k < line.words.length; k++) {
       const w = line.words[k], own = over[`${line.src}.${w.k}`] || {};
       const next = line.words[k + 1];
-      const end = Math.min(next?.onset ?? Infinity, line.exitStart + (w.exitDelay || 0));
-      w.visualWindow = Math.max(.01, end - w.onset);
+      const end = Math.min(next?.onset ?? Infinity, line.exitStart + (w.exitDelay || 0), timeline.duration ?? Infinity);
+      w.visualWindow = Math.max(0, end - w.onset);
       const mode = own.fx ?? style.entryFx ?? 'quick';
       const requested = own.entryMs ?? style.entryMs ?? 80;
       const effect = mode === 'auto' ? w.appear : mode === 'quick' ? 'pop' : mode;

@@ -94,7 +94,8 @@ export function buildView(panel) {
       } catch (err) {}
       panel.herePress();
     });
-    for (const ev of ['pointerup', 'pointercancel']) panel.hereBtn.addEventListener(ev, () => panel.hereRelease());
+    panel.hereBtn.addEventListener('pointerup', () => panel.hereRelease());
+    for (const ev of ['pointercancel','lostpointercapture']) panel.hereBtn.addEventListener(ev, () => { if (panel.hereAt) { panel.cancelHere(); app.history.cancel(); } });
     panel.hereBtn.addEventListener('contextmenu', (e) => e.preventDefault());
     panel.hereBtn.addEventListener('keydown', (e) => {
       if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {

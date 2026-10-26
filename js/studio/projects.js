@@ -41,7 +41,7 @@ export async function loadFile(self, file, { keepProject = false } = {}) {
       self.saveSoon();
       self.mediaAlert.hidden = true;
       try {
-        await store.putFile(id, file, file.name, file.type, p.song.mediaId);
+        await store.putFile(id, file, file.name, file.type, p.song.mediaId, { signal: controller.signal });
       } catch (e) {
         if (active()) self.mediaAlert.hidden = false;
         if (active()) toast('No pude guardar la canción en este navegador. Funciona igual, pero si recargas tendrás que subirla otra vez.', 'bad');
