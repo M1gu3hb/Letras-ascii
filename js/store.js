@@ -7,12 +7,13 @@ function open() {
   return new Promise((resolve, reject) => {
     if (!('indexedDB' in window)) return reject(new Error('sin IndexedDB'));
     const rq = indexedDB.open(DB, 2);
+    let blocked = false;
     rq.onupgradeneeded = () => {
       const s = rq.result.objectStoreNames.contains(OS) ? rq.transaction.objectStore(OS) : rq.result.createObjectStore(OS, { keyPath: 'id' });
       if (!s.indexNames.contains('kind')) s.createIndex('kind', 'kind');
     };
-    rq.onblocked = () => reject(new Error('Cierra otras pestañas de Letras ASCII para actualizar el guardado.'));
-    rq.onsuccess = () => resolve(rq.result);
+    rq.onblocked = () => { blocked = true; reject(new Error('Cierra otras pestañas de Letras ASCII para actualizar el guardado.')); };
+    rq.onsuccess = () => { if (blocked) { rq.result.close(); return; } rq.result.onversionchange = () => rq.result.close(); resolve(rq.result); };
     rq.onerror = () => reject(rq.error || new Error('IndexedDB falló'));
   });
 }
@@ -20,16 +21,14 @@ const wrap = (mode, fn) =>
   open().then(
     (db) =>
       new Promise((resolve, reject) => {
-        const tx = db.transaction(OS, mode);
-        const rq = fn(tx.objectStore(OS));
-        tx.oncomplete = () => {
-          db.close();
-          resolve(rq ? rq.result : undefined);
-        };
-        tx.onerror = tx.onabort = () => {
-          db.close();
-          reject(tx.error || new Error('IndexedDB falló'));
-        };
+        let tx, rq, settled = false;
+        const fail = error => { if (settled) return; settled = true; db.close(); reject(error); };
+        try {
+          tx = db.transaction(OS, mode);
+          tx.oncomplete = () => { if (settled) return; settled = true; db.close(); resolve(rq ? rq.result : undefined); };
+          tx.onerror = tx.onabort = () => fail(tx.error || new Error('IndexedDB falló'));
+          rq = fn(tx.objectStore(OS));
+        } catch (error) { fail(error); try { tx?.abort(); } catch {} }
       }),
   );
 
@@ -37,11 +36,14 @@ const wrap = (mode, fn) =>
 // así el guardado automático no reescribe la canción cada vez.
 export const putProject = (id, project, name) => wrap('readwrite', (s) => s.put({ id, kind: 'project', name, updated: Date.now(), project }));
 export const getProject = (id) => wrap('readonly', (s) => s.get(id));
-export async function putFile(id, source, name, type, mediaId) {
+export async function putFile(id, source, name, type, mediaId, { signal } = {}) {
   // Some WebKit storage contexts reject Blob/File serialization. ArrayBuffer
   // is structured-cloneable there; getFile recreates the same public Blob API.
+  const active = () => { if (signal?.aborted) throw new DOMException('Carga cancelada', 'AbortError'); };
+  active();
   const bytes = await source.arrayBuffer();
-  return wrap('readwrite', (s) => s.put({ id: id + ':file', kind: 'file', bytes, name, type: type || source.type, mediaId }));
+  active();
+  return wrap('readwrite', (s) => { active(); return s.put({ id: id + ':file', kind: 'file', bytes, name, type: type || source.type, mediaId }); });
 }
 export const getFile = (id) => wrap('readonly', (s) => s.get(id + ':file')).then((record) => record?.bytes instanceof ArrayBuffer ? { ...record, blob: new Blob([record.bytes], { type: record.type }) } : record);
 export const delProject = (id) =>

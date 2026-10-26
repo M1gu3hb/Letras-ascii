@@ -5,10 +5,10 @@
 // Un toque en un espacio vacío mueve el cursor; arrastrar en el vacío desplaza la vista; dos dedos (o Ctrl + rueda) acercan.
 import { PEAKS_PER_SEC } from './audio.js';
 import { h } from './ui.js';
-import { fmtTime } from './project.js';
+import { fmtRuler } from './project.js';
 
 const MIN_LEN = 0.05; // lo más corta que puede ser una palabra
-const MIN_GAP = 0.06; // separación mínima entre dos palabras
+const MIN_GAP = 0; // permite tiempos rápidos y bordes contiguos sin cruzar al vecino
 const RULER = 18;
 const MIN_SPAN = 0.8; // lo más cerca que se puede acercar (segundos visibles)
 
@@ -250,11 +250,11 @@ export class TimeStrip {
     g.font = '600 10px "JetBrains Mono", monospace';
     g.textAlign = 'left';
     g.fillStyle = cInk;
-    const first = Math.ceil((this.clip0 + this.a) / step) * step;
+    const first = Math.max(0, Math.ceil((this.clip0 + this.a) / step) * step);
     for (let s = first; s < this.clip0 + this.b + 1e-6; s += step) {
       const x = this.tx(s - this.clip0);
       g.fillRect(Math.round(x), RULER - 5, 1, 5);
-      const lab = step < 1 ? fmtTime(Math.floor(s)) + '.' + String(Math.round((s % 1) * 10)) : fmtTime(s);
+      const lab = fmtRuler(s, step);
       g.fillText(lab, x + 3, RULER - 6);
     }
     g.fillStyle = 'rgba(255,255,255,0.08)';

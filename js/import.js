@@ -2,7 +2,7 @@
 // 1) un para-ti.html anterior (trae su letra y sus tiempos)
 // 2) archivos de letra con tiempos: .lrc, .srt, .vtt
 
-import { normalize } from './project.js';
+import { normalize, parseClock as projectClock, validateLyrics } from './project.js';
 const num = (s) => parseFloat(String(s).replace(',', '.'));
 
 // ───────────── HTML anterior ─────────────
@@ -29,7 +29,7 @@ export function readPayloadFromHtml(html) {
       project: { text: phrases.join('\n'), sync: d.sync, style: d.style, over: d.over, offset: d.offset } };
   }
   if (!d || !Array.isArray(d.lines) || !d.lines.length) throw new Error('Ese archivo no es un proyecto compatible de Letras ASCII o no contiene letra.');
-  return {
+  const result = {
     intro: typeof d.intro === 'string' ? d.intro.slice(0,200) : 'para ti',
     outro: typeof d.outro === 'string' ? d.outro.slice(0,200) : '',
     seed: d.seed | 0,
@@ -37,6 +37,8 @@ export function readPayloadFromHtml(html) {
       .filter((l) => Array.isArray(l) && (l[0] == null || Number.isFinite(+l[0])) && typeof l[1] === 'string' && l[1].trim())
       .map((l) => [l[0] == null ? null : +l[0], l[1].trim(), Array.isArray(l[2]) && l[2].every(Number.isFinite) ? l[2] : undefined]),
   };
+  validateLyrics(result.lines.map(line => line[1]).join('\n'));
+  return result;
 }
 
 // ───────────── LRC / SRT / VTT ─────────────
@@ -61,15 +63,13 @@ function parseLrc(text) {
       // parts: [antes, mm, ss, texto, mm, ss, texto, ...]
       const words = [];
       const times = [];
+      const append = (text, t) => text.trim().split(/\s+/).filter(Boolean).forEach((word, k) => { words.push(word); times.push(+(t + k * .05).toFixed(3)); });
+      append(parts[0], tags[0]);
       for (let i = 1; i + 2 < parts.length + 1; i += 3) {
         const t = +parts[i] * 60 + num(parts[i + 1].replace(':', '.'));
         const txt = (parts[i + 2] || '').trim();
         if (!txt) continue;
-        const ws = txt.split(/\s+/).filter(Boolean);
-        ws.forEach((w, k) => {
-          words.push(w);
-          times.push(+(t + k * 0.05).toFixed(2));
-        });
+        append(txt, t);
       }
       if (words.length) {
         body = words.join(' ');
@@ -84,6 +84,12 @@ function parseLrc(text) {
 }
 
 const timeRe = /(?:(\d{1,2}):)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s*-->\s*/;
+const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const decodeEntities = text => text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (whole, entity) => {
+  if (entity[0] !== '#') return entities[entity.toLowerCase()] || whole;
+  const hex = entity[1].toLowerCase() === 'x', code = Number.parseInt(entity.slice(hex ? 2 : 1), hex ? 16 : 10);
+  return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : '�';
+});
 function parseCues(text) {
   const out = [];
   const blocks = text.replace(/\r/g, '').split(/\n{2,}/);
@@ -93,13 +99,13 @@ function parseCues(text) {
     if (k < 0) continue;
     const m = ls[k].match(timeRe);
     const t = (m[1] ? +m[1] * 3600 : 0) + +m[2] * 60 + +m[3] + num('0.' + m[4].padEnd(3, '0'));
-    const body = ls
+    const body = decodeEntities(ls
       .slice(k + 1)
       .join(' ')
       .replace(/<[^>]+>/g, '')
       .replace(/\{[^}]*\}/g, '')
       .replace(/\s+/g, ' ')
-      .trim();
+      .trim()).replace(/\s+/g, ' ').trim();
     if (body) out.push({ t, text: body });
   }
   return out;
@@ -113,6 +119,7 @@ export function parseTimed(text, filename = '') {
   const valid = rows.filter((r) => Number.isFinite(r.t) && r.t >= 0);
   valid.sort((a, b) => a.t - b.t);
   if (!valid.length) throw new Error('No encontré tiempos válidos en ese archivo. Necesito un .lrc, .srt o .vtt.');
+  validateLyrics(valid.map(row => row.text).join('\n'));
   return valid;
 }
 
@@ -121,42 +128,49 @@ export function toLines(rows, start, duration) {
   const lines = [];
   let dropped = 0;
   for (const r of rows) {
-    const t = +(r.t - start).toFixed(2);
-    if (t < -0.2 || t > duration - 0.9) {
+    const t = +(r.t - start).toFixed(3);
+    if (t < -0.2 || t >= duration) {
       dropped++;
       continue;
     }
-    lines.push([Math.max(0, t), r.text, r.wt ? r.wt.map((x) => Math.max(0, +(x - start).toFixed(2))) : undefined]);
+    lines.push([Math.max(0, t), r.text, r.wt ? r.wt.map((x) => Math.max(0, +(x - start).toFixed(3))) : undefined]);
   }
   return { lines, dropped };
 }
 
-export function readFileText(accept) {
+export function readFileText(accept, { signal } = {}) {
   return new Promise((resolve, reject) => {
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = accept;
     inp.style.display = 'none';
-    inp.addEventListener('change', () => {
+    let reader, settled = false;
+    const abort = () => finish(new DOMException('Importación cancelada', 'AbortError'));
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true; inp.remove(); inp.onchange = inp.oncancel = null; signal?.removeEventListener('abort', abort);
+      if (reader) { reader.onload = reader.onerror = null; if (reader.readyState === FileReader.LOADING) reader.abort(); }
+      error ? reject(error) : resolve(value);
+    };
+    inp.onchange = () => {
+      if (settled) return;
       const f = inp.files && inp.files[0];
-      inp.remove();
-      if (!f) return reject(new Error('cancelado'));
-      const rd = new FileReader();
-      rd.onload = () => resolve({ name: f.name, text: String(rd.result) });
-      rd.onerror = () => reject(new Error('No pude leer ese archivo.'));
-      rd.readAsText(f);
-    });
-    inp.addEventListener('cancel', () => { inp.remove(); reject(new Error('cancelado')); }, { once: true });
-    document.body.append(inp);
-    inp.click();
+      if (!f) return finish(new Error('cancelado'));
+      try {
+        const rd = reader = new FileReader();
+        rd.onload = () => finish(null, { name: f.name, text: String(rd.result) });
+        rd.onerror = () => finish(new Error('No pude leer ese archivo.'));
+        rd.readAsText(f);
+      } catch { finish(new Error('No pude leer ese archivo.')); }
+    };
+    inp.oncancel = () => finish(new Error('cancelado'));
+    if (signal?.aborted) return abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    try { document.body.append(inp); inp.click(); } catch (error) { finish(error); }
   });
 }
 
 // "1:23", "83", "01:23.5" -> segundos
 export function parseClock(s) {
-  const t = String(s).trim().replace(',', '.');
-  if (!t) return 0;
-  const p = t.split(':').map(Number);
-  if (p.some((x) => !Number.isFinite(x))) return NaN;
-  return p.length === 1 ? p[0] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 3600 + p[1] * 60 + p[2];
+  return String(s).trim() ? projectClock(s) : 0;
 }

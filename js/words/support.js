@@ -2,7 +2,7 @@ import { getPreference as lsGet, setPreference as lsSet } from '../storage/prefe
 export const HEX = { white: '#ffffff', cream: '#ffecde', blush: '#ffc4c4', rose: '#ff7096', pink: '#ff4fd8', ruby: '#e0245e', orange: '#ff8a3d', amber: '#ffb26c', gold: '#ffd75e', mint: '#7dffc4', cyan: '#4fe3ff', ice: '#cfeeff', violet: '#9a7bff', lav: '#c3b4ee' };
 export const PALKEY = { edge: 5, self: 4, classic: 0 };
 export const PALBACK = { 5: 'edge', 4: 'self', 0: 'classic' };
-export const GAP = 0.06; // separación mínima entre palabras (igual que el motor)
+export const GAP = 0; // pueden tocarse; nunca se impone una pausa a tiempos explícitos
 export const r3 = (x) => Math.round(x * 1000) / 1000;
 
 

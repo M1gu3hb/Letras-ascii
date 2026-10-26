@@ -30,7 +30,6 @@ const TABS = [
 ];
 const FORMATS = { wide: ['16 / 9', 16 / 9, 'Horizontal'], tall: ['9 / 16', 9 / 16, 'Vertical'], square: ['1 / 1', 1, 'Cuadrada'] };
 
-const REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 export class App {
@@ -59,6 +58,7 @@ export class App {
     this.scene.overlays = false;
     this.scene.deferHidden = true; // con el escenario oculto no se rehace nada: se arregla solo al volver a verse
     this.player = new Player(this.scene, audio, this.canvas, 'studio');
+    if (this.scene.motionQuery) this.scope.listen(this.scene.motionQuery, 'change', () => this.syncDemo());
     this.player.onState = () => this.paintTransport();
     this.player.onEnd = () => this.paintTransport();
     this.persistence = new Autosave(store.putProject, (state, id) => {
@@ -82,6 +82,7 @@ export class App {
       });
       this.scope.observe(ro, this.stage);
       this.scope.observe(ro, this.thost); // girar el teléfono o cambiar a pantalla completa vuelve a acomodar las letras
+      this.scope.cleanups.push(() => clearTimeout(rt));
     }
     // pantalla completa: tocar o mover el ratón muestra los controles; salir de la pantalla completa del navegador cierra la vista
     this.theaterOn = false;
@@ -157,7 +158,7 @@ export class App {
     }
     this.loopBtn = h('button', { class: 'tbtn', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Repetir el tramo', onclick: () => this.setLoop(!this.player.loopClip) }, '↻');
     this.rateSel = h('select', { class: 'rate', 'aria-label': 'Velocidad' }, [['1', '1×'], ['0.75', '0.75×'], ['0.5', '0.5×']].map(([v, t]) => h('option', { value: v }, t)));
-    this.rateSel.addEventListener('change', () => this.player.setRate(+this.rateSel.value));
+    this.rateSel.addEventListener('change', () => this.setRate(+this.rateSel.value));
     const fmtSel = h('select', { class: 'rate', 'aria-label': 'Forma de la pantalla' }, Object.entries(FORMATS).map(([k, v]) => h('option', { value: k }, v[2])));
     fmtSel.value = this.format;
     fmtSel.addEventListener('change', () => {
@@ -272,7 +273,10 @@ export class App {
   }
 
   restart() {
+    const resumeAudition = this.player.auditionRange && this.player.state === 'playing';
+    this.panels.words?.audition.stop();
     this.player.seek(0);
+    if (resumeAudition) this.player.resume();
     this.demoHold = false;
     if (this.player.demo) this.player.demoT0 = performance.now() / 1000;
     this.syncDemo();
@@ -307,6 +311,7 @@ export class App {
   }
 
   onKey(e) {
+    if (e.defaultPrevented || this.destroyed || this.root.inert || this.grid.inert && !this.theaterOn) return;
     const tg = e.target;
     const typing = tg && tg.closest && tg.closest('textarea, input:not([type=range]), select, [contenteditable]');
     // pantalla completa: Esc la cierra, la barra espaciadora reproduce/pausa
@@ -356,6 +361,11 @@ export class App {
     this.player.loopClip = v;
     this.loopBtn.classList.toggle('on', v);
     this.loopBtn.setAttribute('aria-pressed', v ? 'true' : 'false');
+  }
+  setRate(value) {
+    this.player.setRate(value);
+    this.rateSel.value = String(value);
+    if (this.panels.words?.speed) this.panels.words.speed.value = value === .5 ? '.5' : value === .75 ? '.75' : '1';
   }
   paintPlayIcons() {
     const playing = this.player.state === 'playing';
@@ -496,7 +506,7 @@ export class App {
     // para que veas cada cambio al mover un control; con ▶ suena de verdad
     // (lo mismo en la pantalla completa: se ve vivo desde que se abre, hasta que le des ▶)
     const peek = false; // Paused means paused; styling never advances the real song silently.
-    const want = !this.stageHidden() && (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !REDUCED;
+    const want = !this.stageHidden() && (k === 'demo' || k === 'mine' || k === 'blank' || peek) && this.player.state === 'paused' && !this.demoHold && !this.scene.motionQuery?.matches;
     const tl = this.scene.tl;
     let len = tl && tl.lines.length ? Math.min(Math.max(this.player.dur || 30, 6), tl.lastHide + 1.6) : 8;
     let from = 0;
@@ -526,7 +536,7 @@ export class App {
       if (this.clipUrl) URL.revokeObjectURL(this.clipUrl);
       this.clipUrl = url;
     } else this.player.setSource(null, dur);
-    this.player.setRate(+this.rateSel.value);
+    this.setRate(+this.rateSel.value);
     this.paintTransport();
     this.paintTime();
     if (was) this.emit('interrupted');
@@ -583,15 +593,18 @@ export class App {
     if (this.destroyed) return;
     this.destroyed = true;
     this.cancelLoad();
+    this.closeProjects?.();
+    if (this.theaterOn) this.closeTheater();
+    this.root.inert = true;
     for (const panel of Object.values(this.panels)) panel.destroy?.();
-    await this.persistence.flush();
     this.scope.destroy();
     clearInterval(this.ticker); clearTimeout(this.barT);
     this.rebuildSoon.cancel(); this.refreshAudioSoon.cancel();
     this.player.destroy(); this.audioFull.pause(); this.audioFull.removeAttribute('src'); this.audioFull.load();
     if (this.clipUrl) URL.revokeObjectURL(this.clipUrl);
     if (this.fullUrl) URL.revokeObjectURL(this.fullUrl);
-    this.listeners = {}; this.closeProjects?.(); this.root.replaceChildren();
+    await this.persistence.flush();
+    this.listeners = {}; this.root.replaceChildren(); this.root.inert = false;
     document.documentElement.classList.remove('studio-page');
   }
 

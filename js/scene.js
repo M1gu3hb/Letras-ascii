@@ -1,7 +1,7 @@
 // Escena: distribución de la letra, bolita karaoke, polvo, corazón y composición de cada cuadro.
 import { clamp, lerp, smooth } from './util.js';
 import { Renderer, KC, PAL_SELF, PAL_EDGE } from './grid.js';
-import { Typo, edgeChars } from './type.js';
+import { Typo } from './type.js';
 import { buildTimeline, pseudoLine, TONE_COLORS, COLORS } from './timeline.js';
 import { renderWord, get3D } from './fx.js';
 import { drawHeart, warmHeart } from './heart.js';
@@ -135,13 +135,12 @@ export class Scene {
         const ms = Math.max(...u.words.map((w) => w.size || 1));
         const sc = clamp(0.55 + 0.42 * ms, 0.78, 1.1);
         this.layoutLine(u, { y0: 3, y1: heroBottom, Fmax: Math.min(rows * 0.5, 30) * sc * this.sizeG, yShift: SHIFT[n % SHIFT.length] });
-        for (const w of u.words) if (w.appear === 'flip3d' || w.hold === 'sway3d' || u.exit === 'sink3d') get3D(this.R, w);
+        for (const w of u.words) if (w.renderMode !== 'normal' && (w.appear === 'flip3d' || w.hold === 'sway3d' || u.exit === 'sink3d')) get3D(this.R, w);
       });
-      for (const line of tl.lines) line.ctx = this.buildCtx(line);
     } else {
       for (const line of tl.lines) {
         this.layoutLine(line, { y0: 3, y1: karaokeTop, Fmax: Math.min(rows * 0.36, 17) * this.sizeG });
-        for (const w of line.words) if (w.appear === 'flip3d' || w.hold === 'sway3d' || line.exit === 'sink3d') get3D(this.R, w);
+        for (const w of line.words) if (w.renderMode !== 'normal' && (w.appear === 'flip3d' || w.hold === 'sway3d' || line.exit === 'sink3d')) get3D(this.R, w);
       }
     }
     this.intro = pseudoLine(this.tl.intro ?? 'para ti', 0.35, { appear: 'decode', hold: 'breathe', tone: 'dual', seed: 11, stagger: 0.28, appearDur: 0.9 });
@@ -151,54 +150,7 @@ export class Scene {
       this.outro = pseudoLine(this.tl.outro, this.tl.lastHide + 0.4, { appear: 'rise', hold: 'breathe', tone: 'dual', seed: 23, stagger: 0.3, appearDur: 0.9 });
       this.layoutLine(this.outro, { y0: Math.floor(r.rows * 0.64), y1: Math.floor(r.rows * 0.88), Fmax: 12 });
     }
-    this.buildBall();
     this.textLayer.layout();
-  }
-
-  // frase completa en chiquito (debajo de la palabra principal); ahí brinca la bolita
-  buildCtx(line) {
-    const rows = this.r.rows;
-    const words = line.words.map((w) => ({ text: w.text, onset: w.onset, dur: w.dur, k: w.k, face: 'round', size: 1, stretch: false, colKey: 'cream' }));
-    const c = { t: line.t, hideAt: line.hideAt, words, tone: 'cream', pal: PAL_EDGE, pseudo: true, plain: true };
-    this.layoutLine(c, { y0: rows - ctxBand(rows), y1: rows - 4, Fmax: 4.4 });
-    // una frase larga en una rejilla chica se saldría por abajo: se aprovecha también el margen de abajo y una letra un poco menor
-    if (Math.max(...words.map((w) => w.gy + w.Hb)) > rows) this.layoutLine(c, { y0: rows - ctxBand(rows) - 2, y1: rows - 1, Fmax: 4.4, Fmin: 3 });
-    for (const w of words) {
-      w.ech0 = new Uint8Array(w.Wb * w.Hb);
-      edgeChars(w.cov0, w.Wb, w.Hb, w.ech0);
-    }
-    return c;
-  }
-
-  drawCtx(line, t) {
-    if (this.textLayer) return; // ambos modos inferiores usan el layout segmentado compartido
-    const c = line.ctx;
-    if (!c) return;
-    const a = smooth(line.t - 0.55, line.t - 0.15, t) * (1 - smooth(line.hideAt - 0.4, line.hideAt, t));
-    if (a <= 0.02) return;
-    const g = this.R.grid;
-    for (const w of c.words) {
-      const rel = t - w.onset;
-      const len = Math.max(w.dur, 0.25);
-      let alpha;
-      let frac = -1;
-      if (rel < 0) alpha = 0.3;
-      else if (rel < len) {
-        alpha = 1;
-        frac = clamp(rel / len);
-      } else alpha = 0.58;
-      const { Wb, Hb, gx, gy, cov0, ech0 } = w;
-      for (let j = 0; j < Hb; j++) {
-        for (let i = 0; i < Wb; i++) {
-          const v0 = cov0[j * Wb + i];
-          if (v0 < 0.045) continue;
-          const ov = ech0[j * Wb + i];
-          const v = (ov !== 64 && ov !== 35 ? 0.58 + 0.42 * v0 : v0) * alpha * a;
-          const kc = rel < 0 ? KC.LAV : frac >= 0 ? (i / Wb <= frac ? KC.WHITE : KC.ROSE) : KC.BLUSH;
-          g.put(gx + i, gy + j, v > 1.1 ? 1.1 : v, kc, 0, ov);
-        }
-      }
-    }
   }
 
   layoutLine(line, opts = {}) {
@@ -299,7 +251,7 @@ export class Scene {
         const Fk = F * sizes[k];
         const emk = typo.emCells(Fk);
         const maxExtra = w.stretch ? w.stretchEm * emk : 0;
-        const built = typo.buildWord(txtOf(w), Fk, maxExtra, w.stretch, faces[k], thick[k], track);
+        const built = w.renderMode === 'normal' ? { Wb: plan.bounds[k].width, Hb: plan.bounds[k].height } : typo.buildWord(txtOf(w), Fk, maxExtra, w.stretch, faces[k], thick[k], track);
         Object.assign(w, built);
         w.gx = clamp(Math.round(x + wd / 2 - w.Wb / 2), 0, Math.max(0, cols - w.Wb));
         w.gy = clamp(Math.round(yRow + (base - (1 + 0.86 * Fk)) - 1), 0, Math.max(0, rows - w.Hb));
@@ -324,141 +276,7 @@ export class Scene {
     line.F = F;
   }
 
-  // ─────────── bolita ───────────
-  buildBall() {
-    const wps = [];
-    for (const l of this.tl.lines) {
-      const line = this.tl.focus === 'word' && l.ctx ? l.ctx : l;
-      for (const w of line.words) wps.push({ t: w.onset, x: w.gx + w.Wb / 2, y: w.gy + w.topRow - 1.9, line, w });
-    }
-    this.wps = wps;
-    this.wpCursor = 0;
-  }
-
-  ballState(t) {
-    const wps = this.wps;
-    if (!wps || !wps.length) return null;
-    const first = wps[0];
-    if (t < first.t - 0.9) return null;
-    if (t < first.t) {
-      const u = (t - (first.t - 0.9)) / 0.9;
-      return { x: lerp(first.x - 8, first.x, u), y: lerp(-3, first.y, u) - 4 * 5 * u * (1 - u), alpha: smooth(0, 0.5, u), vy: 1, land: 0, wp: -1, rad: first.line.F || 6 };
-    }
-    // índice del waypoint actual
-    let k = this.wpCursor;
-    if (k >= wps.length || wps[k].t > t) k = 0;
-    while (k + 1 < wps.length && wps[k + 1].t <= t) k++;
-    this.wpCursor = k;
-    const a = wps[k];
-    const b = wps[k + 1];
-    const sinceLand = t - a.t;
-    let x = a.x;
-    let y = a.y;
-    let alpha = 1;
-    let vy = 0;
-    if (!b) {
-      alpha = 1 - smooth(a.line.hideAt, a.line.hideAt + 0.5, t);
-      y += this.restBob(t);
-    } else {
-      const gap = b.t - a.t;
-      const sameLine = a.line === b.line;
-      const longGap = !sameLine && gap > 5.4;
-      const launchDur = sameLine ? gap : Math.min(gap, 0.9);
-      const launch = b.t - launchDur;
-      if (t < launch) {
-        // descansa sobre la última palabra
-        y += this.restBob(t);
-        if (longGap) alpha = 1 - smooth(a.line.hideAt, a.line.hideAt + 0.5, t);
-        else alpha = 1;
-        if (sinceLand < 0.12) vy = -1; // aplastamiento al aterrizar
-      } else {
-        const u = clamp((t - launch) / launchDur);
-        const dx = Math.abs(b.x - a.x);
-        let h = clamp(1.8 + 0.1 * dx, 2, 8) * clamp(launchDur / 0.4, 0.4, 1);
-        let sx0 = a.x;
-        let sy0 = a.y;
-        if (longGap) {
-          sx0 = b.x - 8;
-          sy0 = -3;
-          h = 5;
-          alpha = smooth(0, 0.45, u);
-        }
-        x = lerp(sx0, b.x, u);
-        y = lerp(sy0, b.y, u) - 4 * h * u * (1 - u);
-        vy = u > 0.86 ? 1 : 0.2;
-        if (!longGap && sameLine && sinceLand < 0.1) vy = -1;
-      }
-    }
-    const Fa = a.line.F || 6;
-    const Fb = b ? b.line.F || 6 : Fa;
-    const rad = Fa + (Fb - Fa) * (b ? clamp(1 - (b.t - t) / 0.5) : 0);
-    return { x, y, alpha, vy, land: sinceLand, wp: k, rad };
-  }
-
-  restBob(t) {
-    const p = this.R.pulse;
-    return -Math.abs(Math.sin(t * 5.2)) * 0.35 - p * 0.55;
-  }
-
-  drawBall(t) {
-    const R = this.R;
-    const g = R.grid;
-    const b = this.ballState(t);
-    if (!b || b.alpha <= 0.02) return;
-    // estela
-    for (let m = 5; m >= 1; m--) {
-      const bt = this.ballStateLite(t - m * 0.032);
-      if (!bt) continue;
-      const v = (0.5 * (6 - m)) / 6 * b.alpha;
-      g.put(Math.floor(bt.x), Math.floor(bt.y), v, KC.BLUSH, 3, 0);
-    }
-    // ondas al aterrizar
-    if (b.wp >= 0) {
-      const wp = this.wps[b.wp];
-      const tau = b.land / 0.42;
-      if (tau >= 0 && tau < 1) {
-        const rr = 2.5 + 15 * (1 - Math.pow(1 - tau, 2));
-        for (let a = 0; a < 40; a++) {
-          const ang = (a / 40) * Math.PI * 2;
-          const px = Math.floor(wp.x + Math.cos(ang) * rr);
-          const py = Math.floor(wp.y + 2.6 + Math.sin(ang) * rr * 0.34);
-          g.put(px, py, 0.72 * (1 - tau), KC.ROSE, 3, a % 2 ? 45 : 46);
-        }
-      }
-    }
-    const sx = b.vy < 0 ? 1.3 : b.vy > 0.8 ? 0.86 : 1;
-    const sy = b.vy < 0 ? 0.66 : b.vy > 0.8 ? 1.24 : 1;
-    const Rpx = R.cellH * clamp((b.rad || 6) * 0.27, 2.2, 4.6);
-    const rx = (Rpx * sx) / R.cellW;
-    const ry = (Rpx * sy) / R.cellH;
-    const x0 = Math.floor(b.x - rx * 1.9);
-    const x1 = Math.ceil(b.x + rx * 1.9);
-    const y0 = Math.floor(b.y - ry * 1.9);
-    const y1 = Math.ceil(b.y + ry * 1.9);
-    for (let y = y0; y <= y1; y++) {
-      for (let x = x0; x <= x1; x++) {
-        const dx = (x + 0.5 - b.x) / rx;
-        const dy = (y + 0.5 - b.y) / ry;
-        const r2 = dx * dx + dy * dy;
-        if (r2 <= 1) {
-          const z = Math.sqrt(1 - r2);
-          const lum = Math.max(0, (-0.36 * dx - 0.5 * dy + 0.79 * z) / 1.0);
-          const v = (0.4 + 0.75 * lum) * b.alpha;
-          g.put(x, y, v, lum > 0.82 ? KC.WHITE : lum > 0.5 ? KC.BLUSH : KC.ROSE, 1, 0);
-        } else if (r2 < 3.4) {
-          const v = 0.22 * (1 - (r2 - 1) / 2.4) * b.alpha;
-          g.put(x, y, v, KC.ROSE, 1, 0);
-        }
-      }
-    }
-  }
-
-  ballStateLite(t) {
-    const s = this.ballState(t);
-    return s && s.alpha > 0.02 ? s : null;
-  }
-
-  // ─────────── cuadro ───────────
+  // Energía y composición del cuadro. El karaoke y su bolita pertenecen a TextLayer.
   pulseAt(t) {
     const e = this.energy;
     if (!e) return 0;
@@ -604,19 +422,17 @@ export class Scene {
         drawHeart(R, cols / 2, rows * (this.outro ? 0.36 : 0.45), heartSize(this.outro ? 0.42 : 0.52), rot(t), pulse * 1.3, 0.95 * a);
         if (this.outro) for (const w of this.outro.words) renderWord(R, this.outro, w, t);
       }
-      if (tl.focus === 'word') {
-        for (const line of tl.lines) if (t >= line.t - 0.6 && t <= line.hideAt + 0.1) this.drawCtx(line, t);
+      if (mode !== 'ended' && tl.focus === 'word') {
         for (const u of tl.units) {
           if (t < u.t - 0.5 || t > u.hideAt + 0.05) continue;
           for (const w of u.words) if (w.renderMode !== 'normal') renderWord(R, u, w, t);
         }
-      } else {
+      } else if (mode !== 'ended') {
         for (const line of tl.lines) {
           if (t < line.t - 0.5 || t > line.hideAt + 0.05) continue;
           for (const w of line.words) if (w.renderMode !== 'normal') renderWord(R, line, w, t);
         }
       }
-      if (!this.textLayer && !R.reduced && this.ballOn && (!outroOn || t < tl.lastHide + 0.3)) this.drawBall(t);
       if (mode === 'ended' && this.overlays) {
         const msg = 'toca para volver a verlo';
         const blink = 0.5 + 0.5 * Math.sin(t * 3.2);

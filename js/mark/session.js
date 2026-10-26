@@ -112,7 +112,7 @@ export function stepCount(self) {
 }
 
 export function cancelCount(self, quiet = false) {
-    if (!quiet) self.pendingStart = null;
+    if (!quiet) { if (self.pendingStart) self.app.player.pause(); self.pendingStart = null; }
     const cd = self.cd;
     if (!cd) return;
     clearTimeout(cd.timer);

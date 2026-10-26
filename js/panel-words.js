@@ -27,6 +27,7 @@ export class WordsPanel {
     this._listKey = '';
     this._lrows = [];
     this._raf = 0;
+    this.editKeys = new Set();
 
     buildView(this);
     this.audition = new Audition(this);
@@ -34,6 +35,7 @@ export class WordsPanel {
 
     app.on('project', () => this.onProject());
     app.on('reset', () => {
+      this.strip.cancelGesture(); this.cancelHere();
       this._timeline = null;
       clearTimeout(this._t);
       this.sel = null;
@@ -42,8 +44,8 @@ export class WordsPanel {
     app.on('rebuilt', () => this.onRebuilt());
     app.on('tick', () => this.tick());
     app.on('state', () => this.startRaf());
-    app.on('tab', () => { if (app.tab !== 'words') { clearTimeout(this._t); this.strip.cancelGesture(); } this.startRaf(); });
-    app.scope.listen(window, 'blur', () => this.strip.cancelGesture());
+    app.on('tab', () => { if (app.tab !== 'words') { clearTimeout(this._t); this.strip.cancelGesture(); this.cancelHere(); } this.startRaf(); });
+    app.scope.listen(window, 'blur', () => { this.strip.cancelGesture(); this.cancelHere(); });
     app.scope.listen(this.el, 'focusin', event => { if (event.target.closest('.tbox, .insp, .audition-settings')) this.setFollow(false); });
     app.scope.listen(app.panelEl, 'scroll', () => {
       if (app.tab !== 'words') return;
@@ -133,6 +135,7 @@ export class WordsPanel {
   }
 
   softRefresh(media) {
+    this.strip.cancelGesture(); this.cancelHere();
     this._timeline = null;
     if (this.app.tab !== 'words') {
       this._stale = true;
@@ -344,7 +347,7 @@ export class WordsPanel {
     const out = [];
     for (const line of tl.lines) {
       for (const w of line.words) {
-        const len = line.wordMode ? Math.max(w.sung || 0, 0.08) : Math.max(w.dur || 0, 0.1);
+        const len = line.wordMode ? Math.max(w.sung || 0, 0.05) : Math.max(w.dur || 0, 0.1);
         out.push({ src: line.src, k: w.k, text: w.text, on: w.onset, len, held: !!w.held, cur: !!this.sel && line.src === this.sel.src, ed: !!over[line.src + '.' + w.k] });
       }
     }
@@ -455,14 +458,20 @@ export class WordsPanel {
   nudgePhrase(...args) { return Timing.nudgePhrase(this, ...args); }
   herePress(...args) { return Timing.herePress(this, ...args); }
   hereRelease(...args) { return Timing.hereRelease(this, ...args); }
+  cancelHere() { this.hereAt = null; this.hereBtn.classList.remove('down'); this.editKeys.clear(); }
   afterTime(...args) { return Timing.afterTime(this, ...args); }
   typing(tg) {
     return tg && tg.closest && tg.closest('textarea, input, select, [contenteditable]');
   }
   onKey(e) {
     const app = this.app;
+    if (e.defaultPrevented || app.destroyed || app.root.inert || app.grid.inert) return;
     if (app.tab !== 'words' || !this.has() || !this.sel || e.ctrlKey || e.metaKey) return;
     if (this.typing(e.target)) return;
+    if (['ArrowLeft','ArrowRight','[',']','m','M'].includes(e.key) || e.key === 'Enter' && !e.target.closest?.('button,a')) {
+      if (!this.editKeys.size) app.history.begin();
+      this.editKeys.add(e.code || e.key);
+    }
     const big = e.shiftKey;
     const fine = e.altKey;
     let used = true;
@@ -514,10 +523,12 @@ export class WordsPanel {
   }
   onKeyUp(e) {
     if (this.app.tab !== 'words') return;
+    if (this.app.root.inert || this.app.grid.inert) { this.cancelHere(); this.app.history.cancel(); return; }
     if (['m', 'M', 'Enter'].includes(e.key) && this.hereAt) {
       e.preventDefault();
       this.hereRelease();
     }
+    if (this.editKeys.delete(e.code || e.key) && !this.editKeys.size) this.app.history.commit();
   }
 
   // ───────────── inspector: cómo se ve ─────────────
@@ -564,11 +575,12 @@ export class WordsPanel {
           {
             type: 'button',
             class: 'chip pal' + ((o.col || '') === c ? ' on' : ''),
+            'aria-pressed': String((o.col || '') === c),
             'data-v': c,
             'aria-label': t,
             title: t,
             onclick: () => {
-              col.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', b.dataset.v === c));
+              col.querySelectorAll('.chip').forEach((b) => { b.classList.toggle('on', b.dataset.v === c); b.setAttribute('aria-pressed', String(b.dataset.v === c)); });
               this.setOver({ col: c || undefined });
             },
           },
@@ -600,12 +612,14 @@ export class WordsPanel {
             fxChips.set(cur);
           } else this.setOver({ fxs: undefined });
           fxChips.classList.toggle('dim', !e.target.checked);
+          fxChips.querySelectorAll('button').forEach(b => { b.disabled = !e.target.checked; });
         },
       }),
       h('span', { class: 'knob' }),
       h('span', { class: 'txt' }, 'Elegir efectos a mano'),
     );
     fxChips.classList.toggle('dim', !fxOn);
+    fxChips.querySelectorAll('button').forEach(b => { b.disabled = !fxOn; });
     const caps = segmented(
       [
         ['', 'Auto'],

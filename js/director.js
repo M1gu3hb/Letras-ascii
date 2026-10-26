@@ -168,7 +168,7 @@ export const EXIT_BY_MOOD = {
 const SECTION_MOODS = ['stars', 'waves', 'aurora', 'embers', 'rain', 'fireflies', 'snow', 'plasma'];
 const CHORUS_MOODS = ['rings', 'spectrum', 'pulse', 'tunnel', 'hearts'];
 
-const canStretch = (text) => /[aeou]/i.test(text);
+const canStretch = (text) => /[aeou]/i.test(text.normalize('NFD'));
 const pick = (r, arr) => arr[Math.floor(r() * arr.length) % arr.length];
 
 // terminación sonora de la última palabra, para detectar rimas
@@ -459,7 +459,6 @@ export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
       Object.assign(w, { appear: fx, hold, face, colKey: col, size: clamp(size, 0.7, 1.5), fill, palOverride, stretch: longW || (fill && canStretch(w.text) && w.dur >= 0.6) });
     });
     restyle(line, opts, si, seed);
-    applyOver(line, opts.over);
     // salida
     const catEx = line.words.find((w) => w.cat && CATS[w.cat].exit);
     let ex;
@@ -493,10 +492,14 @@ export function direct(lines, seed = 0, duration = 58.3, opts = {}) {
         break;
       }
     }
+    // El motivo repetido conserva la dirección automática; los overrides son de esta ocurrencia.
+    if (!firstOf.has(line.key)) firstOf.set(line.key, {
+      exit: line.exit, pal: line.pal, kw: line.kw,
+      words: line.words.map(({ appear, hold, face, colKey, size, fill, palOverride, stretch }) => ({ appear, hold, face, colKey, size, fill, palOverride, stretch })),
+    });
     // La rima es automática; la elección manual también prevalece en la última palabra.
     applyOver(line, opts.over);
     styleDurations(line);
-    if (!firstOf.has(line.key)) firstOf.set(line.key, line);
   });
 
   // pase 4: salida de cada palabra (cascada) para todas las frases

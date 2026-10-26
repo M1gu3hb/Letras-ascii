@@ -8,7 +8,7 @@ Node 24. `npm ci`, `npm run build`; servir `site/` con cualquier servidor estát
 
 ## Arquitectura
 
-El flujo es Canción → Letra → Marcar → Ajustar → Estilo → Exportar. Ajustar permite audición A–B con contexto, edición numérica y deshacer/rehacer sin que la tira siga al audio mientras editas. Estilo ofrece entradas rápidas, modos independientes ASCII/texto normal para letras y karaoke, y versiones reversibles. Consulta `docs/timeline-y-legibilidad.md` para el contrato, el mapa de módulos, la migración y el plan de validación/publicación.
+El flujo es Canción → Letra → Marcar → Ajustar → Estilo → Exportar. Ajustar permite audición A–B con contexto, edición numérica y deshacer/rehacer sin que la tira siga al audio mientras editas. Estilo ofrece entradas rápidas, modos independientes ASCII/texto normal para letras y karaoke, y versiones reversibles. Consulta [la auditoría integral y su diagrama](docs/auditoria-integral.md) para los defectos reproducidos y sus regresiones, y `docs/timeline-y-legibilidad.md` para el contrato, el mapa de módulos, la migración y el plan de validación/publicación.
 
 - `js/studio.js`: composición de la app y API estable utilizada por sus paneles.
 - `js/studio/`: proyectos, teatro/pantalla completa y navegación guiada.
@@ -37,10 +37,12 @@ npm test
 
 `npm test` ejecuta lint, pruebas unitarias, build y regresiones de navegador. `npm run test:browser -- reliability ux` selecciona suites. `PLAYWRIGHT_EXECUTABLE_PATH` permite utilizar un Chromium ya instalado. `scripts/fixtures.mjs` crea audio sintético original para las pruebas; no hacen falta canciones personales. Las capturas se guardan en `test/audit/` y están excluidas de Git.
 
-Suites activas: smoke, migración de datos, fiabilidad integral, UX adaptativa (14 tamaños), disposición/formato de escena, captura por frase/palabra, timeline por mouse/toque/teclado, aspecto ASCII, exportación y pantalla completa. Los demás scripts antiguos son utilidades de diagnóstico, no parte de la condición de aprobación. GitHub Actions ejecuta la suite con permisos de lectura y sin credenciales de despliegue.
+Suites activas: auditoría de fronteras (`audit-boundaries`), smoke, migración de datos, fiabilidad integral, UX adaptativa (14 tamaños), disposición/formato de escena, captura por frase/palabra, timeline por mouse/toque/teclado, aspecto ASCII, exportación y pantalla completa. Los demás scripts antiguos son utilidades de diagnóstico, no parte de la condición de aprobación. GitHub Actions ejecuta la suite con permisos de lectura y sin credenciales de despliegue.
 
 ## Contratos y límites
 
+- Audio y video deben contener al menos un segundo de audio; el recorte mínimo es un segundo. Las letras admiten hasta 100.000 caracteres; una importación que supera ese límite se rechaza completa, conservando el trabajo actual.
+- Las marcas explícitas mantienen milisegundos y no reciben una separación artificial de 60 ms. La edición permite bordes contiguos sin cruzar el inicio vecino.
 - Modelo `v:3`: texto por líneas, `sync` absoluto respecto a la canción, `style`, `over`, `clip`, `offset` y `seed`. El HTML exportado usa tiempos relativos al tramo.
 - Exportar requiere al menos una frase renderizable dentro del tramo; se avisa si faltan marcas o quedan fuera.
 - Reimportar v3 conserva estilo, overrides, duraciones y frases no marcadas. LRC/SRT/VTT y HTML antiguo siguen admitidos.
@@ -58,7 +60,7 @@ Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-in
 
 ## Reauditoría
 
-`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit` tras instalar WebKit y sus dependencias. Eso no certifica Safari o iOS físicos.
+`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries` tras instalar WebKit y sus dependencias. Eso no certifica Safari o iOS físicos.
 
 ## Experiencia en teléfono
 

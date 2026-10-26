@@ -29,6 +29,7 @@ export class StylePanel {
     // Lo que reacomoda la letra (grosor, espacio, tamaño, detalle) se reconstruye mientras arrastras,
     // como máximo unas 7 veces por segundo, y una última vez al soltar.
     let rbTimer = 0;
+    app.scope.cleanups.push(() => clearTimeout(rbTimer));
     let lastRb = 0;
     const setLayout = (k, v) => {
       st()[k] = v;
@@ -236,6 +237,7 @@ export class StylePanel {
     app.on('media', () => this.paintStats());
     app.on('reset', () => this.syncFromProject());
     app.on('editrestored', () => this.syncFromProject());
+    app.on('project', () => this.syncFromProject());
     this.paintStats();
   }
 
@@ -285,7 +287,7 @@ export class StylePanel {
     }
     const c = this.app.clip();
     const a = Math.floor(c.start * e.fps);
-    const b = Math.min(e.n, Math.ceil(c.end * e.fps));
+    const b = Math.min(e.hit.length, Math.ceil(c.end * e.fps));
     const hits = [];
     for (let i = a; i < b; i++) if (e.hit[i]) hits.push(i / e.fps);
     let txt = `${hits.length} golpes de graves en este tramo`;

@@ -1,9 +1,9 @@
 // Línea de tiempo de la canción: onda, tramo elegido con dos asas, cursor y marcas de frases.
 import { PEAKS_PER_SEC } from './audio.js';
-import { fmtTime } from './project.js';
+import { fmtRuler } from './project.js';
 
 const HANDLE = 11; // zona de agarre en px (CSS)
-const MIN_LEN = 3;
+const MIN_LEN = 1;
 
 export class Wave {
   constructor({ height = 132, onRange, onSeek } = {}) {
@@ -29,7 +29,8 @@ export class Wave {
     cv.addEventListener('pointerdown', (e) => this.down(e));
     cv.addEventListener('pointermove', (e) => this.move(e));
     cv.addEventListener('pointerup', (e) => this.up(e));
-    cv.addEventListener('pointercancel', (e) => this.up(e));
+    cv.addEventListener('pointercancel', (e) => this.up(e, true));
+    cv.addEventListener('lostpointercapture', (e) => this.up(e, true));
     cv.addEventListener(
       'wheel',
       (e) => {
@@ -57,6 +58,7 @@ export class Wave {
   }
 
   setMedia(media) {
+    this.cancelGesture(false);
     this.media = media;
     this.dur = media ? media.dur : 0;
     this.v0 = 0;
@@ -82,7 +84,7 @@ export class Wave {
     if (!this.media) return;
     const c = around ?? (this.v0 + this.v1) / 2;
     let len = (this.v1 - this.v0) * f;
-    len = Math.max(4, Math.min(this.dur, len));
+    len = Math.max(Math.min(4, this.dur), Math.min(this.dur, len));
     let a = c - ((c - this.v0) / (this.v1 - this.v0)) * len;
     a = Math.max(0, Math.min(this.dur - len, a));
     this.v0 = a;
@@ -127,12 +129,13 @@ export class Wave {
   }
 
   down(e) {
-    if (!this.media) return;
+    if (!this.media || e.button > 0) return;
+    if (this.drag) { this.cancelGesture(); return; }
     const r = this.cv.getBoundingClientRect();
     const x = e.clientX - r.left;
     const kind = this.hit(x, e.pointerType === 'touch' ? 24 : HANDLE);
-    this.cv.setPointerCapture(e.pointerId);
-    this.drag = { kind, x0: x, s0: this.start, e0: this.end, moved: false };
+    try { this.cv.setPointerCapture(e.pointerId); } catch {}
+    this.drag = { kind, id: e.pointerId, x0: x, s0: this.start, e0: this.end, c0: this.cursor, moved: false };
     if (kind === 'seek') {
       this.cursor = Math.max(0, Math.min(this.dur, this.xt(x)));
       this.onSeek && this.onSeek(this.cursor);
@@ -144,6 +147,7 @@ export class Wave {
     const r = this.cv.getBoundingClientRect();
     const x = e.clientX - r.left;
     const d = this.drag;
+    if (d && d.id !== e.pointerId) return;
     if (!d) {
       if (this.media) {
         const k = this.hit(x);
@@ -152,7 +156,8 @@ export class Wave {
       return;
     }
     const dt = this.xt(x) - this.xt(d.x0);
-    if (Math.abs(x - d.x0) > 2) d.moved = true;
+    if (!d.moved && Math.abs(x - d.x0) < (e.pointerType === 'touch' ? 9 : 4)) return;
+    d.moved = true;
     let s = this.start;
     let en = this.end;
     if (d.kind === 'start') s = Math.max(0, Math.min(d.e0 - MIN_LEN, d.s0 + dt));
@@ -172,10 +177,21 @@ export class Wave {
     this.draw();
     this.onRange && this.onRange(s, en, false);
   }
-  up(e) {
-    const d = this.drag;
-    this.drag = null;
+  cancelGesture(restore = true) {
+    const d = this.drag; this.drag = null;
     if (!d) return;
+    if (restore && d.kind !== 'seek') {
+      this.start = d.s0; this.end = d.e0;
+      if (d.moved) this.onRange?.(d.s0, d.e0, true);
+    } else if (restore) { this.cursor = d.c0; this.onSeek?.(d.c0); }
+    try { if (this.cv.hasPointerCapture(d.id)) this.cv.releasePointerCapture(d.id); } catch {}
+    this.draw();
+  }
+  up(e, cancelled = false) {
+    const d = this.drag;
+    if (!d || d.id !== e.pointerId) return;
+    if (cancelled) { this.cancelGesture(); return; }
+    this.drag = null;
     if (d.kind !== 'seek' && d.moved) this.onRange && this.onRange(this.start, this.end, true);
     else if (d.kind === 'move' && !d.moved) {
       // un toque dentro del tramo: mueve el cursor ahí
@@ -243,7 +259,7 @@ export class Wave {
     for (let t = Math.ceil(this.v0 / step) * step; t < this.v1; t += step) {
       const x = this.tx(t);
       g.fillRect(x, Hh - axisH, 1, 5);
-      g.fillText(fmtTime(t) + (step < 1 ? '.5' : ''), x + 3, Hh - 4);
+      g.fillText(fmtRuler(t, step), x + 3, Hh - 4);
     }
     // marcas de frases
     g.fillStyle = cHan;
@@ -274,6 +290,6 @@ export class Wave {
       g.fillRect(Math.round(cx) - 1, 0, 2, Hh - axisH);
     }
   }
-  destroy() { this.resizeObserver?.disconnect(); }
+  destroy() { this.cancelGesture(false); this.resizeObserver?.disconnect(); }
 
 }
