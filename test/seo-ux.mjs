@@ -24,12 +24,15 @@ try{
  await staticPage.screenshot({path:`${folder}/static-guide-${kind}.png`});await nojs.close();
 
  const slowContext=await browser.newContext(),slow=await slowContext.newPage();let release,blocked=0;const gate=new Promise(resolve=>release=resolve);
- await slow.route('**/fonts/**',async route=>{blocked++;await gate;await route.continue().catch(()=>{})});
+ await slow.route('**/fonts/**',async route=>{if(route.request().url().endsWith('/nunito-latin-800-normal.woff2')){await route.abort('failed');return}blocked++;await gate;await route.continue().catch(()=>{})});
  try{
   await slow.goto(origin,{waitUntil:'domcontentloaded'});await slow.getByRole('button',{name:'Guía de uso',exact:true}).waitFor({state:'visible',timeout:5000});
   ok(blocked>0&&await slow.getByRole('tab').count()===6,'editor controls appear while artistic fonts are still blocked');
+  await slow.waitForFunction(()=>[...document.fonts].some(font=>font.status==='error'));await slow.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  ok(!await slow.evaluate(()=>document.documentElement.classList.contains('ready')),'one failed font cannot finalize layout while other fonts are pending');
   await slow.getByRole('button',{name:'Guía de uso',exact:true}).click();ok(await slow.getByRole('dialog',{name:'Guía de uso',exact:true}).isVisible(),'help works before fonts finish');
   await slow.getByRole('button',{name:'Cerrar guía',exact:true}).click();
+  release();await ready(slow);ok(true,'font metrics are finalized after all font requests settle, including failures');
  }finally{release();await slowContext.close()}
 
  const devices=[['phone-320',320,568,true],['phone-390',390,700,true],['phone-land',844,390,true],['tablet-p',768,1024,true],['tablet-l',1180,820,true],['small-desktop',1024,680,false],['desktop',1440,900,false],['reflow-200',720,450,false]];

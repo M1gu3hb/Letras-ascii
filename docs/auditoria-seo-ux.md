@@ -47,7 +47,7 @@ Se combinaron revisión visual, DOM y nombres accesibles, navegación real con t
 | S02 | Faltaban descripción, canonical, metadatos sociales, imagen y descripción estructurada del producto. | HTML estático con Open Graph, Twitter, `WebApplication`, favicon y tarjeta 1200×630; la batería consulta los archivos reales del build. |
 | S03 | `robots.txt` y `sitemap.xml` respondían 404 en producción. | El build genera ambos y el sitemap anuncia únicamente el editor público. |
 | S04 | Sin JavaScript el body no explicaba el producto ni el recorrido. | Contenido HTML inicial útil, H1, seis pasos, información de guardado y aviso sin JavaScript. Es contenido del producto, sin datos de proyectos. |
-| S05 | Retener las fuentes artísticas dejaba body vacío y cero pestañas tras 1,5 s. | [La captura diagnóstica](images/seo-ux/12-fuentes-bloqueadas-antes.png) muestra ese fallo de carga. La interfaz se monta antes de esperarlas y usa `font-display: swap`. Al terminar se recalculan las métricas del lienzo. Se prueba que los controles y la guía funcionan con fuentes pendientes. |
+| S05 | Retener las fuentes artísticas dejaba body vacío y cero pestañas tras 1,5 s. | [La captura diagnóstica](images/seo-ux/12-fuentes-bloqueadas-antes.png) muestra ese fallo de carga. La interfaz se monta antes de esperarlas y usa `font-display: swap`. Al terminar se recalculan las métricas del lienzo. Un fallo parcial no adelanta esa medición mientras las demás fuentes siguen pendientes. Se prueba que los controles y la guía funcionan con fuentes pendientes. |
 | S06 | En móvil la entrada no explicaba qué resultado se obtiene ni existía ayuda global. | Introducción breve y guía accesible desde cualquier etapa, con instrucciones de guardado y apertura del HTML. La ayuda pausa la audición antes de abrirse. |
 | S07 | Siguiente/Atrás o completar captura dejaban el foco en body o en el CTA anterior. | Foco explícito en el panel de destino, paneles enfocables y enlace para saltar navegación. El foco de los diálogos vuelve a su botón de origen. |
 | S08 | Volver a Estilo cambiaba el scroll de 500 a 0. | Se conserva la posición por etapa y proyecto. Un proyecto diferente empieza con posiciones nuevas. |
@@ -69,7 +69,7 @@ Se combinaron revisión visual, DOM y nombres accesibles, navegación real con t
 - `scripts/site-document.mjs` y `build.mjs`: documento público, previews, datos estructurados, archivos de rastreo y 404. La URL pública se define en `SITE_URL`; hay que cambiarla si cambia el dominio principal.
 - `assets/social-card.html`, `assets/social-card.png`, `assets/favicon.svg`: fuente y recursos gráficos propios del enlace público. La tarjeta usa tipografía de sistema y no necesita servicios externos.
 - `js/guide-content.js`, `js/studio/guide.js`: una sola fuente de instrucciones para HTML inicial y guía del editor.
-- `js/main.js`: montaje disponible mientras terminan las fuentes, sin conservar métricas de la tipografía de sustitución.
+- `js/main.js`, `js/fonts.js`: montaje disponible mientras terminan las fuentes, sin conservar métricas de la tipografía de sustitución.
 - `js/studio.js`, `js/studio/navigation.js`, `js/mark/*`, `js/words/view.js`: foco al avanzar, salto de navegación y scroll por etapa.
 - `js/ui.js`, `js/panel-text.js`: etiquetas, grupos y nombres accesibles coherentes.
 - `js/panel-export.js`, `js/export.js`: recuperación, prioridad de acciones y exclusión de destinatarios en buscadores.
@@ -83,7 +83,7 @@ npm test
 PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries seo-ux
 ```
 
-La batería unitaria contiene 57 casos. La nueva suite cubre 148 comprobaciones: documentos y recursos SEO, JavaScript desactivado, fuentes retenidas, ocho tamaños, etiquetas, foco, ayuda, captura nativa, retorno al scroll, Vista plegable, objetivos alcanzables, popup bloqueado y excepción, destinatario real y exclusión del HTML personal. Los casos se contabilizan por ejecución, no por captura.
+La batería unitaria contiene 57 casos. La nueva suite cubre 150 comprobaciones: documentos y recursos SEO, JavaScript desactivado, fuentes retenidas y fallo parcial de fuentes, ocho tamaños, etiquetas, foco, ayuda, captura nativa, retorno al scroll, Vista plegable, objetivos alcanzables, popup bloqueado y excepción, destinatario real y exclusión del HTML personal. Los casos se contabilizan por ejecución, no por captura.
 
 Matriz: 320×568, 390×700, 844×390, 768×1024, 1180×820, 1024×680, 1440×900 y 720×450. Este último representa el espacio CSS equivalente a una ventana de 1440×900 al 200%; no simula todos los efectos del zoom físico. En el teléfono de 390 px se reduce además la altura a 400 px mientras se escribe y se comprueba el toque del CTA; [Captura estable del espacio reducido](images/seo-ux/13-altura-reducida-despues.png). No se presenta como teclado virtual de un dispositivo físico.
 
