@@ -156,6 +156,7 @@ export function startFresh(self) {
 }
 
 export function continuePass(self) {
+    self.app.preparePlayback?.();
     self.arm(self.resumePoint(), self.reason === 'blocked' && self.fresh, undefined, self.reason === 'blocked');
 }
 
@@ -163,6 +164,7 @@ export function arm(self, from, fresh, prepare, immediate = false) {
     const app = self.app;
     if (!app.media) return toast('Primero sube la canción (paso 1).', 'bad');
     if (!self.phrases().length) return toast('Primero escribe la letra (paso 2).', 'bad');
+    app.preparePlayback?.();
     self.fresh = fresh;
     self.dropHold();
     if (app.player.loopClip) app.setLoop(false); // repetir el tramo reiniciaría la canción a media marcación
@@ -458,6 +460,7 @@ export function jump(self, i, restart) {
     if (self.phase === 'run' || self.phase === 'count') return;
     self.flush();
     const app = self.app;
+    app.preparePlayback?.();
     const s = app.project.sync[i];
     const clip0 = app.clip().start;
     if (restart) {
@@ -491,6 +494,7 @@ export function stopListen(self) {
 export function previewMarked(self) {
     const app = self.app;
     if (app.theaterOn) return;
+    app.preparePlayback?.();
     self.previewing = true;
     app.audioFull.pause();
     if (app.player.loopClip) app.setLoop(false);

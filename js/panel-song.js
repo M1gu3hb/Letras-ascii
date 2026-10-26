@@ -145,6 +145,7 @@ export class SongPanel {
 
   testClip() {
     const app = this.app;
+    app.preparePlayback();
     app.audioFull.pause();
     app.player.start(0);
   }

@@ -8,8 +8,20 @@ import {validateMedia} from '../../js/media-preflight.js';
 import * as store from '../../js/store.js';
 import * as Timing from '../../js/words/timing.js';
 import {EditHistory} from '../../js/edit-history.js';
+import {debounce} from '../../js/ui.js';
 const {newProject,normalize,modelOf,parseClock,fmtTimeMs,fmtRuler}=Project;
 const MAX_LYRIC_CHARS=Project.MAX_LYRIC_CHARS??100000;
+
+test('flushing a pending update applies its latest arguments once inside the current gesture',async()=>{
+ const calls=[],update=debounce(value=>calls.push(value),10);
+ update('old clip');update('selected clip');update.flush();assert.deepEqual(calls,['selected clip']);
+ await new Promise(resolve=>setTimeout(resolve,30));update.flush();assert.deepEqual(calls,['selected clip']);
+});
+test('a canceled delayed update cannot run later or be resurrected by flush',async()=>{
+ let calls=0;const update=debounce(()=>calls++,10);update();update.cancel();update.flush();
+ await new Promise(resolve=>setTimeout(resolve,30));assert.equal(calls,0);
+ update();update.now();await new Promise(resolve=>setTimeout(resolve,30));assert.equal(calls,1);
+});
 
 test('a stale audio preparation cannot unmute a newer one or leave it muted',async()=>{
  const releases=[];

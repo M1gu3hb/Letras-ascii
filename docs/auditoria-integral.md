@@ -20,6 +20,8 @@ flowchart TD
   U --> AUDIO[Preflight, decode, análisis y worker]
   AUDIO --> PLAYER[Player: reloj, rate, pausa y fin]
   AUDIO --> WAVE[Onda y picos]
+  UI --> READY[preparePlayback: aplica cambios pendientes dentro del gesto]
+  READY --> PLAYER
   PLAYER --> MARK[Mark: cuenta, captura y recuperación]
   MARK --> P
   PLAYER <--> AB[Audición temporal A–B]
@@ -57,7 +59,7 @@ El diagrama guía la búsqueda por fronteras: una acción debe modificar el proy
 
 ## Registro de hallazgos
 
-Los casos se buscaron siguiendo las transiciones del diagrama, no solo comprobando que cada pantalla abriera. Las 22 regresiones unitarias finales se ejecutaron además contra una copia limpia del código de `117097d`: las 22 fallaron. Las 23 primeras regresiones de navegador fallaron también antes de las correcciones. Después se añadieron pruebas de entradas adversas, bordes y precisión hasta completar 28 casos de navegador. Los nombres siguientes corresponden a pruebas ejecutables de `test/unit/audit.test.mjs` y `test/audit-boundaries.mjs`.
+Los casos se buscaron siguiendo las transiciones del diagrama, no solo comprobando que cada pantalla abriera. Las 24 regresiones unitarias finales se ejecutaron además contra una copia limpia del código de `117097d`: las 24 fallaron. Las 23 primeras regresiones de navegador fallaron también antes de las correcciones. Después se añadieron pruebas de entradas adversas, bordes y precisión hasta completar 30 casos de navegador. Los nombres siguientes corresponden a pruebas ejecutables de `test/unit/audit.test.mjs` y `test/audit-boundaries.mjs`.
 
 | ID | Disparador y fallo anterior | Causa y corrección | Regresión |
 |---|---|---|---|
@@ -95,6 +97,8 @@ Los casos se buscaron siguiendo las transiciones del diagrama, no solo comproban
 | A32 | Un open bloqueado de IndexedDB o un fallo síncrono dejaba conexiones abiertas. | La resolución tardía y la creación fallida de transacción no cerraban la conexión. Se cierran en cada ruta y ante cambio de versión. | `blocked database open`, `synchronous storage failure` |
 | A33 | Desmontar mientras el guardado era lento dejaba audio y eventos activos. | El desmontaje esperaba primero a persistencia. Libera reproducción, gestos, timers, listeners y URLs antes de esperar el guardado. | `destroy-stops-before-storage-finishes`; remount en `reaudit` |
 | A34 | El exportado listaba frases sin marca o fuera del tramo y duplicaba ayudas del canvas con controles DOM. | La transcripción usaba el texto completo y seguían habilitados overlays antiguos. Se deriva de la timeline renderizable y se usan los controles DOM. El payload conserva todo para reimportación. | `recipient-transcript-matches-clip`, `reading`, recorrido de exportación |
+
+| A35 | Reproducir inmediatamente después de editar el recorte podía empezar con el audio anterior y detenerse 260 ms después. | La actualización diferida seguía pendiente durante el nuevo gesto. `preparePlayback()` aplica cambios visuales y de audio pendientes antes de iniciar; una actualización explícita cancela la diferida anterior. Se cubren transporte, prueba de tramo, A–B y captura. | `clip-edit-immediate-play-uses-new-audio`, `clip-edit-countdown-keeps-its-gesture`, regresiones de `debounce.flush` |
 
 Además se retiró el renderizado antiguo de contexto/bolita que ya había sido sustituido por `TextLayer`, y el modo normal dejó de rasterizar sprites ASCII invisibles. Se mantienen las comprobaciones de píxeles, geometría y exportación. Lint incluye ahora todos los scripts y pruebas, la nueva suite se ejecuta en ambos jobs de CI, se fijó CI en Ubuntu 24.04 con acciones oficiales v6 ancladas por SHA y runtime Node 24, y se retiró `main: index.js`, que apuntaba a un archivo inexistente en este frontend privado.
 
@@ -139,7 +143,7 @@ npm run test:browser
 PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries
 ```
 
-La batería unitaria contiene 51 pruebas: 29 existentes y 22 nuevas. Chromium cubre 16 suites; WebKit cubre siete, incluida la nueva auditoría de 28 casos. Durante la revisión, la batería completa detectó una discrepancia adicional de 50/80 ms entre campo y tira; tras corregirla se repitieron `words`, `adjust` (101 comprobaciones) y `audit-boundaries`, y CI vuelve a ejecutar la batería completa sobre el commit del PR.
+La batería unitaria contiene 53 pruebas: 29 existentes y 24 nuevas. Chromium cubre 16 suites; WebKit cubre siete, incluida la nueva auditoría de 30 casos. Durante la revisión, la batería completa detectó una discrepancia adicional de 50/80 ms entre campo y tira; tras corregirla se repitieron `words`, `adjust` (101 comprobaciones) y `audit-boundaries`, y CI vuelve a ejecutar la batería completa sobre el commit del PR.
 
 `PLAYWRIGHT_EXECUTABLE_PATH=/ruta/a/chromium` selecciona un Chromium instalado. No se debe reutilizar esa variable al ejecutar WebKit. Las pruebas usan medios sintéticos y no necesitan credenciales ni música personal. `npm audit --json` no encontró vulnerabilidades en el árbol de dependencias auditado; no hubo cambios de versión ni de lockfile.
 
@@ -150,8 +154,10 @@ audit_base=$(mktemp -d)
 git archive 117097d js package.json | tar -x -C "$audit_base"
 mkdir -p "$audit_base/test/unit"
 cp test/unit/audit.test.mjs "$audit_base/test/unit/"
-node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 22 fallos en la base
+node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 24 fallos en la base
 ```
+
+Los fixtures de la nueva suite usan un proceso WebKit por caso para aislar los pipelines nativos de medios. Se conservan el inicio mediante gesto real, la cuenta silenciosa, la reproducción efectiva y las comparaciones estrictas. Cada suite WebKit tiene un límite de 180 s y el workflow publica en anotaciones el contexto de un fallo o bloqueo. La preparación de audio por gesto incluye trazas nativas acotadas para diagnosticar rechazos de reproducción.
 
 Los resultados finales de las suites, revisión e integración se registran en el PR asociado. La primera ejecución de WebKit en CI detectó una carrera en el fixture del contador: asignaba un clip nuevo sin emitir su evento y leía el contador del clip anterior antes del rebuild diferido. La regresión se corrigió para editar el campo real de final de tramo y después comprobar la estadística; conserva la comparación estricta con los golpes analizados. No se relajó el resultado esperado ni se añadió un reintento. La aprobación requiere lint, unitarias, build y ambas tareas de CI en el mismo commit. La comprobación pública posterior contrasta los hashes de los tres assets principales con ese build y reproduce el HTML realmente descargado en un documento independiente con la red desconectada.
 

@@ -273,10 +273,12 @@ export class App {
   }
 
   restart() {
-    const resumeAudition = this.player.auditionRange && this.player.state === 'playing';
+    const playing = this.player.state === 'playing';
+    const resumeAudition = this.player.auditionRange && playing;
+    this.preparePlayback();
     this.panels.words?.audition.stop();
     this.player.seek(0);
-    if (resumeAudition) this.player.resume();
+    if (resumeAudition || playing && this.player.state !== 'playing') this.player.resume();
     this.demoHold = false;
     if (this.player.demo) this.player.demoT0 = performance.now() / 1000;
     this.syncDemo();
@@ -345,6 +347,7 @@ export class App {
   // ───────────── reproducción ─────────────
   togglePlay() {
     const p = this.player;
+    if (p.state !== 'playing') this.preparePlayback();
     if (this.audioFull && !this.audioFull.paused) this.audioFull.pause();
     if (p.state === 'playing') {
       p.pause();
@@ -525,6 +528,7 @@ export class App {
     else this.scene.setEnergy(fakeEnergy(clip.end - clip.start + 2), 0);
   }
   refreshAudio() {
+    this.refreshAudioSoon.cancel();
     const clip = this.clip();
     const dur = clip.end - clip.start;
     this.refreshEnergy();
@@ -542,6 +546,7 @@ export class App {
     if (was) this.emit('interrupted');
   }
   refreshAudioSoon = debounce(() => this.refreshAudio(), 260);
+  preparePlayback() { this.rebuildSoon.flush(); this.refreshAudioSoon.flush(); }
 
   refreshFull() {
     if (this.fullUrl) URL.revokeObjectURL(this.fullUrl);

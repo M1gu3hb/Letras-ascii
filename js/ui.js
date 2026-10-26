@@ -13,16 +13,19 @@ export function h(tag, attrs = {}, ...kids) {
 }
 
 export const debounce = (fn, ms) => {
-  let id = 0;
+  let id = 0, args;
+  const invoke = () => { id = 0; const pending = args; args = undefined; return fn(...pending); };
   const d = (...a) => {
     clearTimeout(id);
-    id = setTimeout(() => fn(...a), ms);
+    args = a;
+    id = setTimeout(invoke, ms);
   };
+  d.flush = () => { if (!id) return; clearTimeout(id); return invoke(); };
   d.now = (...a) => {
-    clearTimeout(id);
-    fn(...a);
+    d.cancel();
+    return fn(...a);
   };
-  d.cancel = () => clearTimeout(id);
+  d.cancel = () => { clearTimeout(id); id = 0; args = undefined; };
   return d;
 };
 

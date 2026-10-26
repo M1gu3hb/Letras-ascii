@@ -9,11 +9,20 @@ import '../scripts/fixtures.mjs';
 const kind=process.env.PLAYWRIGHT_BROWSER||'chromium',phase=process.env.AUDIT_PHASE||'regression';
 const folder='test/audit/integral';mkdirSync(folder,{recursive:true});
 writeFileSync('test/media/audit-short.wav',Buffer.from(encodeWav([new Float32Array(17640)],44100)));
-const {srv,port}=serve('site'),browser=await launch(),errors=[],failures=[],passed=[];
-const context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});
-const page=await context.newPage();watch(page,errors);page.setDefaultTimeout(12000);page.on('dialog',d=>d.accept());
+const {srv,port}=serve('site'),errors=[],failures=[],passed=[];
+let browser=await launch(),context,page;
+const open=async()=>{
+ context=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true});
+ page=await context.newPage();watch(page,errors);page.setDefaultTimeout(12000);page.on('dialog',d=>d.accept());
+ await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
+ await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);
+};
 const check=async(name,run)=>{
- try{await run();passed.push(name);console.log('ok',name);}
+ try{
+  // WPE owns a native media process. Isolate cases instead of accumulating source reloads in one process.
+  if(kind==='webkit'){if(context){await context.close();await browser.close();browser=await launch()}await open()}
+  await run();passed.push(name);console.log('ok',name);
+ }
  catch(error){failures.push({name,error:error.message});console.error('FAIL',name,error.message);await page.screenshot({path:`${folder}/${phase}-${kind}-${name}.png`}).catch(()=>{});}
 };
 const fixture=async(tab='words')=>{
@@ -21,8 +30,7 @@ const fixture=async(tab='words')=>{
 };
 const sync=()=>page.evaluate(()=>structuredClone(window.__app.project.sync));
 try{
- await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
- await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);
+ if(kind!=='webkit')await open();
 
  await check('keyboard-tab-navigation',async()=>{
   await fixture('style');const before=await sync();await page.locator('#tab-style').press('ArrowLeft');
@@ -58,6 +66,20 @@ try{
   await fixture('song');await page.evaluate(()=>window.__app.setClip(10.2,20));
   const end=page.getByRole('textbox',{name:'Termina en',exact:true});await end.fill('0:11.4');await end.press('Tab');
   assert.deepEqual(await page.evaluate(()=>window.__app.project.clip),{start:10.2,end:11.4});
+ });
+ await check('clip-edit-immediate-play-uses-new-audio',async()=>{
+  for(const name of ['Reproducir','▶ Probar este tramo']){
+   await fixture('song');const end=page.getByRole('textbox',{name:'Termina en',exact:true});await end.fill('0:15.00');await end.press('Tab');
+   await page.getByRole('button',{name,exact:true}).click();await page.waitForFunction(()=>window.__app.player.state==='playing'&&!window.__app.audio.paused);
+   assert.equal(await page.evaluate(()=>window.__app.player.dur),3);await page.waitForTimeout(400);
+   assert.ok(await page.evaluate(()=>window.__app.player.state==='playing'&&!window.__app.audio.paused&&window.__app.player.dur===3));
+  }
+ });
+ await check('clip-edit-countdown-keeps-its-gesture',async()=>{
+  await fixture('song');await page.evaluate(()=>{const a=window.__app;a.project.sync=[];a.emit('reset')});
+  const end=page.getByRole('textbox',{name:'Termina en',exact:true});await end.fill('0:15.00');await end.press('Tab');await page.locator('#tab-mark').click();
+  await page.locator('.mcard.idle .primary').click();assert.equal(await page.evaluate(()=>window.__app.player.dur),3);
+  await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused);assert.equal(await page.evaluate(()=>window.__app.player.dur),3);
  });
  await check('rapid-word-numeric-correction',async()=>{
   await fixture();await page.evaluate(()=>{const a=window.__app;a.project.text='Una voz';a.project.clip={start:0,end:3};a.project.offset=0;a.project.sync=[{t:1,wt:[1,1.1],wd:[.05,.05]}];a.projectChanged();a.refreshAudio();a.emit('reset');a.panels.words.show();a.panels.words.select(0,0,{play:false})});

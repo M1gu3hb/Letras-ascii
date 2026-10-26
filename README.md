@@ -48,6 +48,7 @@ Suites activas: auditoría de fronteras (`audit-boundaries`), smoke, migración 
 - Reimportar v3 conserva estilo, overrides, duraciones y frases no marcadas. LRC/SRT/VTT y HTML antiguo siguen admitidos.
 - Los nuevos HTML incluyen `sourceStart` para recuperar tiempos absolutos al reimportar un tramo. El campo de inicio permite sobrescribirlo; los HTML anteriores conservan el ajuste manual.
 - Importar y quitar tiempos tienen un deshacer inmediato. Una edición posterior invalida ese respaldo para no reemplazar trabajo más reciente.
+- Reproducir, audicionar o empezar a marcar aplica los cambios pendientes del recorte dentro del gesto, evitando iniciar con audio anterior y sustituirlo después.
 - Exportar congela proyecto, archivo y tramo desde el clic; los recursos se revalidan para evitar incrustar un reproductor antiguo del caché.
 - El guardado captura una instantánea por ID y se vacía antes de cambiar de proyecto. Si falla, se conserva pendiente y se informa del error.
 - Las aperturas de proyecto aplican solo el último resultado solicitado. Cancelar la recuperación conserva el proyecto actual y su audio; los archivos guardados se comprueban con su identificador de medio.
