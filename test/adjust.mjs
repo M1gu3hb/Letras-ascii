@@ -3,7 +3,7 @@ import {mkdirSync} from 'node:fs';
 import {serve,launch,watch} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 mkdirSync('test/audit/timeline',{recursive:true});
-const {srv,port}=serve('site'),browser=await launch(),errors=[];let checks=0;
+const {srv,port}=serve('site'),errors=[];let browser=await launch(),checks=0;
 const check=(value,message)=>{assert.ok(value,message);console.log('ok',++checks,message)};
 try{
  for(const [width,height] of [[320,568],[360,640],[390,700],[430,932],[844,390],[768,1024],[1024,768],[1366,768],[1440,900]]){
@@ -87,7 +87,10 @@ try{
   check(true,`${width}: design generation is reversible`);
   await page.locator('#tab-words').click();
   if(width===390){await input.evaluate(el=>el.scrollIntoView({block:'end'}));await page.screenshot({path:'test/audit/timeline/after-edit-phone.png'});}
+  await page.evaluate(()=>window.__app.destroy());
   await context.close();
+  // Each WebKit case owns its media process; reused processes can stall after many contexts.
+  if(process.env.PLAYWRIGHT_BROWSER==='webkit'){await browser.close();browser=await launch();}
  }
  assert.deepEqual(errors,[]);console.log(`${checks} adjustment checks passed`);
 }catch(error){

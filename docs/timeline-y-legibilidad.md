@@ -77,7 +77,7 @@ Implementación principal: `4526430`; esta rama incorpora las correcciones poste
 | Lectura/exportación | 38 comprobaciones; cuatro combinaciones de render, dos focos, nueve tamaños, siete familias, reduced motion y recorrido de descarga/reproducción/reimportación/recarga. |
 | Captura móvil existente | 107 comprobaciones aprobadas en Chromium; cinco tamaños y tres formatos, con toques nativos. |
 | UX existente | Matriz de 14 tamaños aprobada. |
-| WebKit | Job de GitHub Actions aprobado para el PR principal: smoke, reliability, reaudit, mobile-capture, adjust y reading. Se ejecuta en CI; la máquina local usa Chromium. |
+| WebKit | Las seis suites (smoke, reliability, reaudit, mobile-capture, adjust y reading) aprobaron también en local con WPE. En CI aprobaron para el PR principal. Durante el cierre se detectaron fallos intermitentes de audio y un bloqueo al reutilizar procesos entre contextos; los casos de Ajustar y los escenarios estrictos de audio ahora usan navegadores separados. No se reducen sus aserciones. |
 | No ejecutado | Teléfonos físicos/teclado virtual; tres fixtures condicionales AAC/Opus/MP3 que no estaban disponibles. |
 
 Las últimas regresiones cubren también una elección manual de fuente/color en la última palabra: una heurística de rima podía reemplazarla, y ahora la decisión manual vuelve a aplicarse después de la heurística.

@@ -59,8 +59,8 @@ try{
   check(await matrix.page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3&&!window.__app.player.demo),'restored marked lyrics stay paused when the phone preview is collapsed');
   await close(matrix.page,matrix.context);
  }
- if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
  for(const mode of ['phrase','word']){
+  if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
   const [width,height]=mode==='phrase'?[320,568]:[390,700];
   const {page,context}=await open(width,height,true);await fill(page,'tall');
   await openMarkOptions(page);if(mode==='word')await page.getByRole('button',{name:'Palabra por palabra',exact:true}).tap();
@@ -76,9 +76,10 @@ try{
   for(let i=0;i<(mode==='phrase'?3:6);i++){await page.locator('.pad').tap();await page.waitForTimeout(360)}
   check(await page.evaluate(()=>window.__app.panels.mark.phase==='done'&&window.__app.project.sync.filter(Boolean).length===3),`strict gesture ${mode}: marking completes using native touches`);await close(page,context);
  }
+ if(kind==='webkit'){await browser.close();browser=await type.launch(launchOptions)}
  const recovery=await open(390,700,true);await fill(recovery.page,'tall');
  await recovery.page.evaluate(()=>{window.__rejectNextMediaPlay=true});await recovery.page.locator('.mcard.idle .primary').tap();
- await recovery.page.waitForFunction(()=>window.__app.panels.mark.reason==='blocked',null,{timeout:6000});await recovery.page.waitForTimeout(500);
+ await recovery.page.waitForFunction(()=>window.__app.panels.mark.reason==='blocked'&&!window.__app.panels.mark.locked(),null,{timeout:6000});
  await recovery.page.locator('.mcard.pause .primary').tap();await recovery.page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused);
  check(true,'a rejected countdown unlock recovers on one direct Resume touch without repeating the countdown');await close(recovery.page,recovery.context);
  const {page,context}=await open(390,700);await page.locator('#tab-style').tap();
