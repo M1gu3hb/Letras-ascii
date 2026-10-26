@@ -21,8 +21,8 @@ jobs:
       - run: npx playwright-core install --with-deps chromium
       - run: npm test
   webkit:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    runs-on: macos-15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, Node 24
         with:
@@ -32,23 +32,21 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright-core install --with-deps webkit
-      - name: Virtual audio output
+      - run: npx playwright-core install webkit
+      - name: Timeout utility
         run: |
-          sudo apt-get install --no-install-recommends -y pulseaudio pulseaudio-utils gstreamer1.0-pulseaudio
-          pulseaudio --start --exit-idle-time=-1
-          pactl load-module module-null-sink sink_name=letras_ci rate=44100 channels=2
-          pactl set-default-sink letras_ci
+          if ! command -v gtimeout >/dev/null; then
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install coreutils
+          fi
       - run: npm run build
       - name: WebKit regression suites
         run: |
           set +e
-          timeout --kill-after=10s 360s dbus-run-session -- xvfb-run -a node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
+          gtimeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
           test_status=${PIPESTATUS[0]}
           exit "$test_status"
         env:
           PLAYWRIGHT_BROWSER: webkit
-          PLAYWRIGHT_HEADLESS: 'false'
       - name: Report WebKit failure context
         if: failure()
         run: |
