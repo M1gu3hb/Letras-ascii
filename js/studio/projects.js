@@ -158,11 +158,14 @@ export async function newAndReset(self) {
 }
 
 export async function openProjects(self) {
+    const request = self.dialogRequest = Symbol('projects');
+    self.closeGuide?.();
     await self.persistence.flush();
     let rows = [];
     try {
       rows = await store.listProjects();
     } catch (e) { toast(e.message || 'No pude leer los proyectos guardados.', 'bad'); return; }
+    if (self.destroyed || self.dialogRequest !== request) return;
     const dlg = h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Mis proyectos' });
     self.closeProjects?.();
     let close = () => {};
@@ -194,6 +197,6 @@ export async function openProjects(self) {
     dlg.append(h('div', { class: 'mbox' }, h('h2', {}, 'Mis proyectos'), h('p', { class: 'muted' }, 'Se guardan solo en este navegador y en este dispositivo.'), list, h('div', { class: 'mfoot' }, h('button', { class: 'btn', type: 'button', onclick: () => close() }, 'Cerrar'))));
     dlg.addEventListener('click', (e) => e.target === dlg && close());
     dlg.addEventListener('keydown', (e) => e.key === 'Escape' && close());
-    close = modalDialog(dlg, self.root);
+    close = modalDialog(dlg, self.root, self.projBtn);
     self.closeProjects = close;
 }

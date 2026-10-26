@@ -122,6 +122,7 @@ export async function buildHtml(app, { title } = {}) {
   const html =
     '<!doctype html>\n<html lang="es"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
+    '<meta name="robots" content="noindex, nofollow, noarchive">' +
     '<meta name="theme-color" content="#07040b"><link rel="icon" href="data:,">' +
     `<title>${esc(name)}</title><style>${css}</style></head><body class="playerpage">` +
     '<div id="app"></div><audio id="audio" playsinline preload="auto"></audio>' +

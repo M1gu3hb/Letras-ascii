@@ -108,7 +108,7 @@ try {
  check(await recipient.evaluate(()=>!document.getElementById('audio').paused),'recipient can play after a back-cache round trip');
  await recipient.getByRole('button',{name:'Pausar',exact:true}).click();await recipient.screenshot({path:'test/audit/reaudit/10-recipient.png'});
 
- mkdirSync('site/embedded',{recursive:true});for(const file of ['index.html','app.js','app.css','player.js','audio-worker.js'])copyFileSync('site/'+file,'site/embedded/'+file);cpSync('site/fonts','site/embedded/fonts',{recursive:true});cpSync('js','site/test-source',{recursive:true});
+ mkdirSync('site/embedded',{recursive:true});for(const file of ['index.html','app.js','app.css','player.js','audio-worker.js','favicon.svg','social-card.png'])copyFileSync('site/'+file,'site/embedded/'+file);cpSync('site/fonts','site/embedded/fonts',{recursive:true});cpSync('js','site/test-source',{recursive:true});
  const embedded=await context.newPage();watch(embedded,errors);await embedded.goto(`http://localhost:${port}/embedded/index.html`);await embedded.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  await embedded.setInputFiles('#songfile','test/media/kick120.wav');await embedded.waitForFunction(()=>window.__app.media&&!window.__app.loadController);
  await embedded.evaluate(()=>{const a=window.__app;a.project.text='Subruta de prueba';a.project.sync=[{t:1}];a.projectChanged();a.emit('reset')});

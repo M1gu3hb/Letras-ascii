@@ -1,6 +1,9 @@
 // Pequeñas piezas de interfaz sin dependencias.
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
+  // Explicit eligibility also covers Safari's restricted default keyboard mode.
+  // Preserve negative indices used by roving tabs and the hidden file picker.
+  if (['button', 'input', 'select', 'textarea', 'a', 'summary'].includes(tag) && !('tabindex' in (attrs || {})) && attrs?.type !== 'hidden') el.tabIndex = 0;
   for (const [k, v] of Object.entries(attrs || {})) {
     if (k === 'class') el.className = v;
     else if (k === 'html') el.innerHTML = v;
@@ -43,9 +46,16 @@ export function toast(msg, kind = '') {
   toastId = setTimeout(() => (toastEl.className = 'toast'), kind === 'bad' ? 6500 : 3200);
 }
 
-// fila con etiqueta + control
+let fieldId = 0;
+// Native labels also let touch, mouse and voice users select the visible field name.
 export function field(label, control, hint) {
-  return h('div', { class: 'field' }, h('div', { class: 'lab' }, label, hint ? h('span', { class: 'hint' }, hint) : null), control);
+  const direct = control.matches('input, select, textarea');
+  const id = control.id || (control.id = 'field-' + ++fieldId);
+  const lab = h(direct ? 'label' : 'div', { class: 'lab', ...(direct ? { for: id } : { id: id + '-label' }) }, label, hint ? h('span', { class: 'hint' }, hint) : null);
+  if (!direct && !control.hasAttribute('aria-label') && !control.hasAttribute('aria-labelledby')) {
+    control.setAttribute('role', 'group'); control.setAttribute('aria-labelledby', lab.id);
+  }
+  return h('div', { class: 'field' }, lab, control);
 }
 
 // deslizador con valor visible

@@ -10,6 +10,10 @@ Node 24. `npm ci`, `npm run build`; servir `site/` con cualquier servidor estát
 
 El flujo es Canción → Letra → Marcar → Ajustar → Estilo → Exportar. Ajustar permite audición A–B con contexto, edición numérica y deshacer/rehacer sin que la tira siga al audio mientras editas. Estilo ofrece entradas rápidas, modos independientes ASCII/texto normal para letras y karaoke, y versiones reversibles. Consulta [la auditoría integral y su diagrama](docs/auditoria-integral.md) para los defectos reproducidos y sus regresiones, y `docs/timeline-y-legibilidad.md` para el contrato, el mapa de módulos, la migración y el plan de validación/publicación.
 
+El botón `?` abre la guía de las seis etapas, guardado y apertura del resultado. Siguiente/Atrás llevan el foco al contenido nuevo; volver a una etapa conserva su posición. En móvil y tableta, Vista permite plegar la previsualización. Consulta la [auditoría de SEO, UX y dispositivos](docs/auditoria-seo-ux.md) para evidencia, casos de recuperación y la matriz de tamaños.
+
+El build publica metadatos, tarjeta social, `robots.txt`, sitemap y una 404 con retorno al editor. La URL canónica está en `scripts/site-document.mjs`. Solo producción permite indexación; los previews de Vercel y los HTML personales exportados solicitan `noindex`. El contenido público inicial también explica el uso sin JavaScript.
+
 - `js/studio.js`: composición de la app y API estable utilizada por sus paneles.
 - `js/studio/`: proyectos, teatro/pantalla completa y navegación guiada.
 - `js/mark/`: vista, constantes y máquina de captura, pausa, cuenta y recuperación.
@@ -61,7 +65,7 @@ Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-in
 
 ## Reauditoría
 
-`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries` tras instalar WebKit y sus dependencias. CI utiliza WebKit en macOS 15 y Chromium en Ubuntu 24.04; los backends Linux de WebKit siguen disponibles para diagnóstico local. Eso no certifica Safari o iOS físicos.
+`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. `test/seo-ux.mjs` añade SEO, ayuda, teclado, fuentes lentas y recorrido por ocho tamaños. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries seo-ux` tras instalar WebKit y sus dependencias. CI utiliza WebKit en macOS 15 y Chromium en Ubuntu 24.04; los backends Linux de WebKit siguen disponibles para diagnóstico local. Eso no certifica Safari o iOS físicos.
 
 ## Experiencia en teléfono
 

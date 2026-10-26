@@ -144,8 +144,8 @@ export function showGo(self) {
 
 export function startAction(self) {
     const app = self.app;
-    if (!self.phrases().length) return app.selectTab('text');
-    if (!app.media) return app.selectTab('song');
+    if (!self.phrases().length) return app.selectTab('text', { focus: true });
+    if (!app.media) return app.selectTab('song', { focus: true });
     if (self.partial()) return self.continuePass();
     self.startFresh();
 }
@@ -513,5 +513,5 @@ export function onTheater(self, open) {
 }
 
 export function goNext(self) {
-    self.app.selectTab('words');
+    self.app.selectTab('words', { focus: true });
 }

@@ -1,4 +1,5 @@
 import { buildNavigation } from './studio/navigation.js';
+import { openGuide } from './studio/guide.js';
 import { Lifecycle, retireMediaUrl } from './lifecycle.js';
 import { Autosave } from './storage/autosave.js';
 import { EditHistory } from './edit-history.js';
@@ -185,7 +186,8 @@ export class App {
     });
     this.projBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.openProjects() }, 'Mis proyectos');
     this.newBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.newAndReset() }, 'Nuevo');
-    const top = h('header', { class: 'top' }, h('div', { class: 'brand' }, h('span', { class: 'mark' }, '▚'), h('span', { class: 'txt' }, 'Letras en ASCII')), this.nameEl, this.projBtn, this.newBtn, this.savedEl);
+    this.helpBtn = h('button', { class: 'btn small ghost help-btn', type: 'button', 'aria-label': 'Guía de uso', title: 'Guía de uso', onclick: () => openGuide(this) }, h('span', { 'aria-hidden': 'true' }, '?'));
+    const top = h('header', { class: 'top' }, h('h1', { class: 'sr-only' }, 'Letras en ASCII: letras sincronizadas y karaoke'), h('div', { class: 'brand' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, '▚'), h('span', { class: 'txt' }, 'Letras en ASCII')), this.nameEl, this.projBtn, this.newBtn, this.helpBtn, this.savedEl);
     this.tabsEl = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Pasos' });
     this.tabBtns = {};
     for (const [id, n, label] of TABS) {
@@ -214,7 +216,8 @@ export class App {
     this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
-    root.replaceChildren(top, this.saveAlert, this.mediaAlert, this.grid, this.theater, this.status);
+    this.skipLink = h('a', { class: 'skip-link', href: '#panel-song', tabindex: '0' }, 'Saltar al paso actual');
+    root.replaceChildren(this.skipLink, top, this.saveAlert, this.mediaAlert, this.grid, this.theater, this.status);
     this.applyFormat();
   }
 
@@ -234,8 +237,12 @@ export class App {
     if (this.scene) requestAnimationFrame(() => this.scene && this.scene.resize());
   }
 
-  selectTab(id) {
+  selectTab(id, { focus = false } = {}) {
     if (this.destroyed) return;
+    const active = document.activeElement;
+    const moveFocus = focus || id !== this.tab && (this.panelEl.contains(active) || this.navigation?.footer.contains(active));
+    if (this.panelScrollContext !== this.id) { this.panelScroll = new Map(); this.panelScrollContext = this.id; }
+    else this.panelScroll.set(this.tab, this.panelEl.scrollTop);
     if (this.tab !== id) toast(null);
     this.previousTab = this.tab;
     this.tab = id;
@@ -261,15 +268,18 @@ export class App {
       this.panels[id].el.id = 'panel-' + id;
       this.panels[id].el.setAttribute('role', 'tabpanel');
       this.panels[id].el.setAttribute('aria-labelledby', 'tab-' + id);
+      this.panels[id].el.tabIndex = -1;
       this.panelEl.append(this.panels[id].el);
     }
     for (const [k, p] of Object.entries(this.panels)) p.el.hidden = k !== id;
     this.panelEl.classList.toggle('fit', id === 'mark');
-    this.panelEl.scrollTop = 0;
     if (this.panels[id].show) this.panels[id].show();
     if (this.scene && this.previewKind() !== this.kind) this.rebuildSoon();
     this.syncDemo();
     this.emit('tab', id);
+    this.skipLink.href = '#panel-' + id;
+    this.panelEl.scrollTop = this.panelScroll.get(id) || 0;
+    if (moveFocus) this.panels[id].el.focus({ preventScroll: true });
   }
 
   restart() {
@@ -597,6 +607,7 @@ export class App {
     this.destroyed = true;
     this.cancelLoad();
     this.closeProjects?.();
+    this.closeGuide?.();
     if (this.theaterOn) this.closeTheater();
     this.root.inert = true;
     for (const panel of Object.values(this.panels)) panel.destroy?.();
