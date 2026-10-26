@@ -13,9 +13,13 @@ const sizes=[[320,568],[360,640],[390,700],[430,932],[844,390]];
 async function open(width,height,strict=false){
  const context=await browser.newContext({viewport:{width,height},hasTouch:true,isMobile:true,deviceScaleFactor:1,acceptDownloads:true});context.setDefaultTimeout(12000);
  if(strict)await context.addInitScript(()=>{
-  const realPlay=HTMLMediaElement.prototype.play,unlocked=new WeakSet();let gesture=false;
+  const realPlay=HTMLMediaElement.prototype.play,realLoad=HTMLMediaElement.prototype.load,unlocked=new WeakSet();let gesture=false;
+  window.__mediaTrace=[];
+  const note=(audio,event,error)=>{if(audio.id!=='audio')return;window.__mediaTrace.push({event,at:Math.round(performance.now()),ready:audio.readyState,paused:audio.paused,src:audio.currentSrc||audio.getAttribute('src'),error:error?{name:error.name,message:error.message}:audio.error?{code:audio.error.code,message:audio.error.message}:undefined});if(window.__mediaTrace.length>70)window.__mediaTrace.shift()};
+  for(const event of ['loadstart','loadedmetadata','canplay','playing','pause','emptied','abort','error'])document.addEventListener(event,e=>note(e.target,event),true);
+  HTMLMediaElement.prototype.load=function(){note(this,'load');return realLoad.call(this)};
   document.addEventListener('click',event=>{if(event.isTrusted){gesture=true;setTimeout(()=>{gesture=false},0)}},true);
-  HTMLMediaElement.prototype.play=function(){if(window.__rejectNextMediaPlay){window.__rejectNextMediaPlay=false;return Promise.reject(new DOMException('Simulated first play rejection','NotAllowedError'))}if(!gesture&&!unlocked.has(this))return Promise.reject(new DOMException('A real Start gesture is required','NotAllowedError'));unlocked.add(this);return realPlay.call(this)};
+  HTMLMediaElement.prototype.play=function(){note(this,'play.call');if(window.__rejectNextMediaPlay){window.__rejectNextMediaPlay=false;return Promise.reject(new DOMException('Simulated first play rejection','NotAllowedError'))}if(!gesture&&!unlocked.has(this))return Promise.reject(new DOMException('A real Start gesture is required','NotAllowedError'));unlocked.add(this);const pending=realPlay.call(this);pending.then(()=>note(this,'play.resolved'),error=>note(this,'play.rejected',error));return pending};
  });
  const page=await context.newPage();watch(page,errors);page.on('dialog',d=>d.accept());await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);return{page,context};
@@ -69,7 +73,7 @@ try{
   check(await page.evaluate(()=>window.__app.panels.mark.phase==='count'&&window.__app.audio.paused),`strict gesture ${mode}: countdown is silent and does not play the song early`);
   check(await page.locator('.mcard.count .btn').evaluate(el=>{const r=el.getBoundingClientRect(),z=el.closest('.mzone').getBoundingClientRect();return r.height>=44&&r.y>=z.y&&r.bottom<=z.bottom+1&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el}),`countdown ${width}×${height}: Cancel remains visible and touchable`);
   try{await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused,null,{timeout:6000})}
-  catch(error){console.log('strict audio diagnostic',await page.evaluate(()=>({phase:window.__app.panels.mark.phase,reason:window.__app.panels.mark.reason,playError:window.__app.player.lastPlayError,ready:window.__app.audio.readyState})));throw error}
+  catch(error){console.log('strict audio diagnostic',JSON.stringify(await page.evaluate(()=>({phase:window.__app.panels.mark.phase,reason:window.__app.panels.mark.reason,playError:window.__app.player.lastPlayError,ready:window.__app.audio.readyState,epoch:window.__app.player.playEpoch,trace:window.__mediaTrace}))));throw error}
   await page.waitForTimeout(200);
   check(await page.evaluate(()=>window.__app.player.t>.05),`strict gesture ${mode}: the audio actually advances after the countdown`);
   await page.screenshot({path:`${folder}/after-tall-running-${mode}-${kind}.png`});
