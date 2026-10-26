@@ -26,16 +26,14 @@ export function buildView(panel) {
       onSize: (src, k, len, final) => final && panel.setLen(src, k, len),
       onSeek: (t) => {
         panel.audition.stop();
-        panel.follow = false;
-        panel.syncFollowBtn();
+        panel.setFollow(false);
         app.audioFull.pause();
         app.player.seek(t);
         panel.strip.setPlayhead(t);
         app.paintTime();
       },
       onView: () => {
-        panel.follow = false;
-        panel.syncFollowBtn();
+        panel.setFollow(false);
       },
       limits: (src, k) => panel.limitsClip(src, k),
       holdMin: () => panel.holdMin(),

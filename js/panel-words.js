@@ -1,7 +1,7 @@
 import * as Timing from './words/timing.js';
 import { buildView } from './words/view.js';
 import { Audition } from './words/audition.js';
-// Paso 5: palabra por palabra. Elige una palabra, ajusta CUÁNDO suena (tira de tiempo, botones, teclado o «Aquí»)
+// Paso 4: Ajustar. Elige una palabra, ajusta CUÁNDO suena (tira de tiempo, botones, teclado o «Aquí»)
 // y cámbiale lo que quieras: animación, tipografía, color, tamaño, grosor, estiramiento y efectos (o déjala en automático).
 import { h, toast, slider, segmented, chips, select } from './ui.js';
 import { modelOf, phrasesOf, fmtTimeMs, FACE_LABELS, COLOR_NAMES, COLOR_LABELS, APPEAR_LABELS, HOLD_LABELS, EXIT_LABELS, MOOD_LABELS, WORDFX_LABELS } from './project.js';
@@ -45,7 +45,13 @@ export class WordsPanel {
     app.on('tab', () => { if (app.tab !== 'words') { clearTimeout(this._t); this.strip.cancelGesture(); } this.startRaf(); });
     app.scope.listen(window, 'blur', () => this.strip.cancelGesture());
     app.scope.listen(this.el, 'focusin', event => { if (event.target.closest('.tbox, .insp, .audition-settings')) this.setFollow(false); });
-    app.scope.listen(app.panelEl, 'scroll', () => { if (app.tab === 'words') this.el.classList.toggle('condensed', app.panelEl.scrollTop > 60); });
+    app.scope.listen(app.panelEl, 'scroll', () => {
+      if (app.tab !== 'words') return;
+      if (app.panelEl.scrollTop > 60) this.el.classList.add('condensed');
+      else if (app.panelEl.scrollTop < 4) this.el.classList.remove('condensed');
+      this.syncScrollPadding();
+    });
+    if (window.ResizeObserver) app.scope.observe(new ResizeObserver(() => this.syncScrollPadding()), this.top);
     app.on('clip', () => this.softRefresh(true));
     app.on('media', () => this.softRefresh(true));
     app.scope.listen(window, 'keydown', (e) => this.onKey(e));
@@ -116,10 +122,14 @@ export class WordsPanel {
     if (list.length && (!this.sel || !list.includes(this.sel.src))) this.sel = { src: list[0], k: 0 };
     this._stale = false;
     this.paintAll();
-    // si el escenario todavía va a rehacerse (cambió de vista), se ajusta cuando termine para no usar tiempos viejos
-    this._needFit = true;
-    if (this.app.previewKind() === this.app.kind) this._needFit = !this.fitPhrase();
+    // El timeline de edición está actualizado aunque la previsualización esté oculta.
+    this._needFit = !this.fitPhrase();
     this.startRaf();
+    this.syncScrollPadding();
+  }
+
+  syncScrollPadding() {
+    if (this.app.tab === 'words') this.app.panelEl.style.setProperty('--adjust-dock-height', Math.ceil(this.top.getBoundingClientRect().height) + 12 + 'px');
   }
 
   softRefresh(media) {
@@ -389,6 +399,7 @@ export class WordsPanel {
   }
 
   setFollow(v) {
+    if (!v) this._needFit = false;
     this.follow = v;
     this.syncFollowBtn();
   }

@@ -219,7 +219,7 @@ function restyle(line, opts, si, seed) {
       const hold = pickWeighted(rr, HOLDS);
       if (groups.includes('animations')) { w.appear = fx; w.hold = k === 0 ? ['bob','wave','breathe','sway3d'][Math.abs(seed)%4] : hold; }
       if (groups.includes('faces')) { const allowed = faces || ALL_FACES; w.face = k === 0 ? allowed[Math.abs(seed)%allowed.length] : face; }
-      if (rnd > 0.45 && !pal) { const color = ALL_COLORS[Math.floor(rr() * ALL_COLORS.length)]; if (groups.includes('colors')) w.colKey = color; }
+      if (!pal) { const color = ALL_COLORS[Math.floor(rr() * ALL_COLORS.length)]; if (groups.includes('colors')) w.colKey = k === 0 ? ALL_COLORS[Math.abs(seed)%ALL_COLORS.length] : color; }
     }
     if (faces && !faces.includes(w.face)) w.face = faces[Math.floor(faceR() * faces.length)];
     if (pal) {

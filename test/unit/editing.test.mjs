@@ -48,6 +48,14 @@ test('randomizing only backgrounds preserves word choices',()=>{
  const p=project();p.style.randomGroups=['backgrounds'];p.style.random=.85;const first=signature(buildTimeline(modelOf(p))).map(l=>l.words);
  p.seed+=7;assert.deepEqual(signature(buildTimeline(modelOf(p))).map(l=>l.words),first);
 });
+test('color-only variations remain visible at every intensity without changing other groups',()=>{
+ for(const intensity of [.15,.45,.85]){
+  const p=project();p.style.random=intensity;p.style.randomGroups=['colors'];const before=signature(buildTimeline(modelOf(p)));p.seed++;const after=signature(buildTimeline(modelOf(p)));
+  assert.notDeepEqual(after.map(l=>l.words.map(w=>w.color)),before.map(l=>l.words.map(w=>w.color)));
+  const protectedGroups=lines=>lines.map(l=>({mood:l.mood,words:l.words.map(({color,...rest})=>rest)}));
+  assert.deepEqual(protectedGroups(after),protectedGroups(before));assert.deepEqual(p.sync,project().sync);
+ }
+});
 test('rhyme styling cannot replace manual font or color on the last word',()=>{
  const p={...newProject(),text:'Una luna\nMi fortuna',clip:{start:0,end:10},sync:[{t:1,wt:[1,2],wd:[.2,.4]},{t:4,wt:[4,5],wd:[.2,.4]}],over:{'1.1':{face:'round',col:'mint'}}};
  p.style.faces=['serif'];const w=buildTimeline(modelOf(p)).lines[1].words[1];

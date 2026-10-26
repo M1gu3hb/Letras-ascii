@@ -45,9 +45,11 @@ try{
   check(valid,`${face}: changing font and size recalculates wrapping and ball geometry`);
  }
  await page.emulateMedia({reducedMotion:'reduce'});
+ await page.waitForFunction(()=>window.__app.scene.motionQuery.matches);
  const still=await page.evaluate(()=>{const s=window.__app.scene,w=s.tl.lines[0].words[1];s.render(w.onset+.02,'song');const a={...s.textLayer.ball};s.render(w.onset+.04,'song');return s.R.reduced&&JSON.stringify(a)===JSON.stringify(s.textLayer.ball)});
  check(still,'reduced motion keeps normal karaoke and its ball still');
  await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.waitForFunction(()=>!window.__app.scene.motionQuery.matches);
  await page.evaluate(()=>{const a=window.__app;Object.assign(a.project.style,{karaokeFace:'hand',karaokeSize:1,karaokeDetail:1});a.projectChanged();a.rebuild()});
  await page.setViewportSize({width:390,height:700});
  await page.getByRole('button',{name:'Ver en pantalla completa',exact:true}).click();
@@ -77,4 +79,7 @@ try{
  await page.evaluate(()=>window.__app.save());await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__app?.media&&!window.__app.loadController);
  check(await page.evaluate(()=>window.__app.project.style.mainMode==='normal'&&window.__app.project.over['0.1'].entryMs===0),'reload restores new settings and media from IndexedDB');
  await context.close();assert.deepEqual(errors,[]);console.log(`${checks} reading and export checks passed`);
+}catch(error){
+ if(process.env.GITHUB_ACTIONS)console.error('::error::'+String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A'));
+ throw error;
 }finally{await browser.close();srv.close()}

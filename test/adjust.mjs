@@ -3,11 +3,11 @@ import {mkdirSync} from 'node:fs';
 import {serve,launch,watch} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 mkdirSync('test/audit/timeline',{recursive:true});
-const {srv,port}=serve('site'),browser=await launch(),errors=[];let checks=0;
+const {srv,port}=serve('site'),errors=[];let browser=await launch(),checks=0;
 const check=(value,message)=>{assert.ok(value,message);console.log('ok',++checks,message)};
 try{
- for(const [width,height] of [[320,568],[390,700],[1440,900]]){
-  const touch=width<600,context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch});
+ for(const [width,height] of [[320,568],[360,640],[390,700],[430,932],[844,390],[768,1024],[1024,768],[1366,768],[1440,900]]){
+  const touch=width<=1024,context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch});
   const page=await context.newPage();watch(page,errors);page.setDefaultTimeout(12000);
   await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>window.__app);
   await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);
@@ -45,10 +45,18 @@ try{
   if(!touch){await block.focus();await page.keyboard.press('Control+z');assert.deepEqual((await snapshot()).sync,initial.sync);await page.keyboard.press('Control+Shift+z');assert.equal((await snapshot()).sync[0].wt[1],13.9);check(true,'desktop: keyboard undo/redo restores exact values');}
   const duration=page.getByRole('spinbutton',{name:'Duración cantada en segundos',exact:true});
   await duration.fill('.35');await duration.press('Tab');assert.equal((await snapshot()).sync[0].wd[1],.35);
+  const ab=page.getByRole('button',{name:'Bucle A–B',exact:true}),listen=page.getByRole('button',{name:'Escuchar palabra',exact:true});
+  touch?await ab.tap():await ab.click();
+  touch?await listen.tap():await listen.click();
+  await page.waitForFunction(()=>window.__app.player.state==='playing'&&!window.__app.audio.paused);
+  const stop=page.getByRole('button',{name:'Detener audición',exact:true});touch?await stop.tap():await stop.click();
+  check(true,`${width}: native audition controls remain reachable after editing numeric fields`);
   check(true,`${width}: duration and exact undo/redo work with the preview collapsed`);
   await page.getByRole('button',{name:'Ver la frase completa',exact:true}).click();
   const beforeCancel=await snapshot();
+  await block.scrollIntoViewIfNeeded();
   const bounds=await block.boundingBox(),from={x:bounds.x+bounds.width*.3,y:bounds.y+bounds.height*.5};
+  assert.ok(await block.evaluate((el,point)=>el.contains(document.elementFromPoint(point.x,point.y)),from),'cancelled gesture starts on the visible word');
   if(touch&&(process.env.PLAYWRIGHT_BROWSER||'chromium')==='chromium'){
    const cdp=await context.newCDPSession(page);
    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...from,id:1}]});
@@ -79,7 +87,13 @@ try{
   check(true,`${width}: design generation is reversible`);
   await page.locator('#tab-words').click();
   if(width===390){await input.evaluate(el=>el.scrollIntoView({block:'end'}));await page.screenshot({path:'test/audit/timeline/after-edit-phone.png'});}
+  await page.evaluate(()=>window.__app.destroy());
   await context.close();
+  // Each WebKit case owns its media process; reused processes can stall after many contexts.
+  if(process.env.PLAYWRIGHT_BROWSER==='webkit'){await browser.close();browser=await launch();}
  }
  assert.deepEqual(errors,[]);console.log(`${checks} adjustment checks passed`);
+}catch(error){
+ if(process.env.GITHUB_ACTIONS)console.error('::error::'+String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A'));
+ throw error;
 }finally{await browser.close();srv.close()}

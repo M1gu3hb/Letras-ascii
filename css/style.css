@@ -1866,6 +1866,8 @@ canvas.wave {
 
 /* paso 5: tira de tiempo y ajustes finos */
 .adjust-tools, .version-controls { display: grid; gap: 10px; min-width: 0; margin-bottom: 16px; }
+.studio[data-tab='words'] .panel { scroll-padding-block-start: var(--adjust-dock-height, 230px); scroll-padding-block-end: 12px; }
+.wordspane :is(button,input,select,summary) { scroll-margin-block: 8px; }
 .version-controls { padding: 14px; border: 1px solid var(--line2); border-radius: 14px; background: #21112a; }
 .precision-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
 .precision-fields input, .context-field input, .insp input[type=number], .gbody input[type=number] { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border-radius: 8px; border: 1px solid var(--line2); background: #10091a; color: var(--ink); font: 600 16px var(--ui); }
