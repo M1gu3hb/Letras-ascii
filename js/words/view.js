@@ -8,7 +8,7 @@ export function buildView(panel) {
       'div',
       { class: 'wempty' },
       h('p', { class: 'muted' }, 'Aquí cambias palabra por palabra cuándo suena y cómo se ve: la animación, la tipografía, el color, el tamaño, el grosor, si se estira y efectos como brillo o explosión. Primero marca tu letra en el paso 3.'),
-      h('button', { class: 'btn primary', type: 'button', onclick: () => app.selectTab('mark') }, 'Ir a marcar la letra'),
+      h('button', { class: 'btn primary', type: 'button', onclick: () => app.selectTab('mark', { focus: true }) }, 'Ir a marcar la letra'),
     );
 
     // frase
@@ -107,7 +107,7 @@ export function buildView(panel) {
     const redoPhrase = h('button', { class: 'btn small ghost', type: 'button', onclick: () => {
       if (!panel.sel || !confirm('¿Volver a marcar esta frase? Las otras frases se conservan.')) return;
       const src = panel.sel.src;
-      app.selectTab('mark'); app.panels.mark.jump(src, true);
+      app.selectTab('mark', { focus: true }); app.panels.mark.jump(src, true);
     } }, 'Volver a marcar esta frase');
     panel.hereRow = h('div', { class: 'row wrap here-row' }, panel.hereBtn, redoPhrase);
     panel.timeBox = h('div', { class: 'tbox' }, panel.hereRow, startRow, durRow, phrRow);

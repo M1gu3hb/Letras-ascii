@@ -4,7 +4,7 @@ const STEPS = ['song', 'text', 'mark', 'words', 'style', 'export'];
 const LABELS = ['Canción', 'Letra', 'Marcar', 'Ajustar', 'Estilo', 'Exportar'];
 export function buildNavigation(app) {
   const note = h('span', { class: 'step-note' });
-  const back = h('button', { class: 'btn ghost', type: 'button', onclick: () => app.selectTab(app.tab === 'export' && app.previousTab === 'style' ? 'style' : app.tab === 'words' && app.previousTab === 'mark' ? 'mark' : STEPS[Math.max(0, STEPS.indexOf(app.tab) - 1)]) }, 'Atrás');
+  const back = h('button', { class: 'btn ghost', type: 'button', onclick: () => app.selectTab(app.tab === 'export' && app.previousTab === 'style' ? 'style' : app.tab === 'words' && app.previousTab === 'mark' ? 'mark' : STEPS[Math.max(0, STEPS.indexOf(app.tab) - 1)], { focus: true }) }, 'Atrás');
   const next = h('button', { class: 'btn primary', type: 'button' });
   const footer = h('div', { class: 'step-footer' }, note, h('div', { class: 'step-buttons' }, back, next));
   const paint = () => {
@@ -19,7 +19,7 @@ export function buildNavigation(app) {
     if (i === 1 && n && !app.media) { label = 'Primero: cargar canción'; destination = 'song'; }
     if (i === 4) { label = 'Siguiente: Exportar'; destination = 'export'; }
     next.textContent = label; next.disabled = i === 1 && !n;
-    next.onclick = () => destination ? app.selectTab(destination) : app.panels.song.input.click();
+    next.onclick = () => destination ? app.selectTab(destination, { focus: true }) : app.panels.song.input.click();
     note.textContent = i === 0 ? (app.media ? 'Elige el tramo que quieres usar.' : 'Crea un detalle con tu canción y letra.') : i === 1 ? 'Una frase por línea. Luego la sincronizas.' : i === 4 ? 'Reproduce para revisar el diseño.' : i === 3 ? 'Ajuste opcional: escucha, corrige y continúa a Estilo.' : 'Descarga el HTML con audio y letra para conservarlo o compartirlo.';
     for (const [index, id] of STEPS.entries()) {
       const done = index === 0 ? !!app.media : index === 1 ? !!n : index === 2 ? n > 0 && count.done === n : false;

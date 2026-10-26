@@ -11,6 +11,8 @@ export class ExportPanel {
     this.prevBtn = h('button', { class: 'btn', type: 'button', onclick: () => this.make('preview') }, 'Vista del destinatario');
     this.dlBtn = h('button', { class: 'btn primary', type: 'button', 'aria-label': 'Descargar el HTML', onclick: () => this.make('download') }, '⬇ Descargar el HTML');
     this.busy = h('div', { class: 'muted small', role: 'status' });
+    this.recovery = h('div', { class: 'row wrap export-recovery' });
+    this.previewLink = h('a', { class: 'btn', hidden: true, target: '_blank', rel: 'noopener' }, 'Abrir vista del destinatario');
     this.notes = h(
       'div',
       { class: 'notes' },
@@ -21,8 +23,8 @@ export class ExportPanel {
         h('li', {}, 'Tu canción y tu letra solo viajan dentro de ese archivo; este sitio no los guarda en ningún servidor.'),
       ]),
     );
-    this.el = h('div', { class: 'pane' }, h('h2', {}, 'Exportar'), this.sum, this.warn, h('div', { class: 'row wrap' }, this.prevBtn, this.dlBtn), this.busy, this.notes);
-    ['media', 'clip', 'project', 'reset'].forEach((ev) => app.on(ev, () => this.paint()));
+    this.el = h('div', { class: 'pane' }, h('h2', {}, 'Exportar'), this.warn, this.recovery, h('div', { class: 'row wrap' }, this.prevBtn, this.dlBtn), this.busy, this.previewLink, this.sum, this.notes);
+    ['media', 'clip', 'project', 'reset'].forEach((ev) => app.on(ev, () => { this.clearPreview(); this.paint(); }));
     this.paint();
   }
   show() {
@@ -50,6 +52,13 @@ export class ExportPanel {
     if (plan && plan.bytes > 22 * 1048576) msgs.push('El archivo va a pesar bastante. Si quieres uno más ligero, elige un tramo más corto.');
     this.warn.classList.toggle('hidden', !msgs.length);
     this.warn.replaceChildren(...msgs.map((m) => h('p', {}, m)));
+    const actions = [];
+    const fix = (tab, text) => actions.push(h('button', { class: 'btn small', type: 'button', onclick: () => app.selectTab(tab, { focus: true }) }, text));
+    if (!r.hasSong) fix('song', 'Elegir canción');
+    if (!r.phrases) fix('text', 'Añadir letra');
+    else if (r.marked < r.phrases) fix('mark', 'Marcar tiempos');
+    if (r.hasSong && r.outside) fix('song', 'Revisar tramo');
+    this.recovery.replaceChildren(...actions); this.recovery.hidden = !actions.length;
     const ok = r.hasSong && r.done > 0 && !this.making;
     this.prevBtn.disabled = !ok;
     this.dlBtn.disabled = !ok;
@@ -62,7 +71,7 @@ export class ExportPanel {
     app.player.pause();
     app.audioFull.pause();
     let win = null;
-    if (kind === 'preview') win = window.open('', '_blank');
+    if (kind === 'preview') { this.clearPreview(); try { win = window.open('', '_blank'); } catch {} }
     this.prevBtn.disabled = this.dlBtn.disabled = true;
     this.busy.textContent = 'Armando el archivo…';
     await new Promise((r) => setTimeout(r, 30));
@@ -74,11 +83,10 @@ export class ExportPanel {
         toast(`Descargado (${fmtBytes(bytes)}). Ábrelo para probarlo.`);
       } else {
         const url = URL.createObjectURL(blob);
-        if (win) win.location.href = url;
-        else window.open(url, '_blank');
-        setTimeout(() => URL.revokeObjectURL(url), 120000);
+        if (win) { win.location.href = url; setTimeout(() => URL.revokeObjectURL(url), 120000); }
+        else { this.previewUrl = url; this.previewLink.href = url; this.previewLink.hidden = false; }
       }
-      this.busy.textContent = `Archivo de ${fmtBytes(bytes)} · audio ${plan.label}`;
+      this.busy.textContent = `Archivo de ${fmtBytes(bytes)} · audio ${plan.label}` + (kind === 'preview' && !win ? '. El navegador bloqueó la ventana automática. Usa «Abrir vista del destinatario».' : '');
     } catch (e) {
       if (win) win.close();
       this.busy.textContent = '';
@@ -88,4 +96,9 @@ export class ExportPanel {
       if (!app.destroyed) this.paint();
     }
   }
+  clearPreview() {
+    if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
+    this.previewUrl = null; this.previewLink.removeAttribute('href'); this.previewLink.hidden = true;
+  }
+  destroy() { this.clearPreview(); }
 }

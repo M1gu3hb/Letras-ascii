@@ -9,6 +9,7 @@ export function openTheater(self) {
     self.root.classList.add('is-theater');
     self.top.inert = true;
     self.grid.inert = true;
+    self.skipLink.inert = true;
     if (self.needRebuild) self.rebuild(); // (cambios que quedaron pendientes mientras el escenario estaba oculto)
     self.paintPlayIcons();
     self.paintTime();
@@ -64,6 +65,7 @@ export function closeTheater(self, { fromPop = false } = {}) {
     self.root.classList.remove('is-theater');
     self.top.inert = false;
     self.grid.inert = false;
+    self.skipLink.inert = false;
     self.demoHold = false;
     self.syncDemo();
     self.scene.resize();

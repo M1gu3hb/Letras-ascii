@@ -85,7 +85,8 @@ export class SongPanel {
     this.testBtn = h('button', { class: 'btn primary', type: 'button', onclick: () => this.testClip() }, '▶ Probar este tramo');
     this.tip = h('p', { class: 'muted small' }, 'Tip: toca la onda para poner el cursor, dale a «Escuchar» y usa «aquí» para marcar dónde empieza y dónde termina. Lo que marques de la letra se conserva aunque cambies el tramo.');
     this.body = h('div', { class: 'songbody hidden' }, this.info, this.wave.cv, this.zoomRow, h('div', { class: 'row' }, this.listenBtn, this.testBtn), h('div', { class: 'lab2' }, 'Tramo de la canción'), this.presets, this.rangeBox, this.len, this.tip);
-    this.el = h('div', { class: 'pane' }, h('h2', {}, 'Tu canción'), this.input, this.drop, this.body);
+    this.introduction = h('p', { class: 'song-intro muted' }, 'Crea letras animadas en ASCII o texto normal y descarga un HTML con tu canción. Empieza eligiendo un archivo de tu dispositivo.');
+    this.el = h('div', { class: 'pane' }, h('h2', {}, 'Tu canción'), this.introduction, this.input, this.drop, this.body);
 
     app.on('media', () => this.refresh());
     app.on('clip', (c) => {
@@ -185,6 +186,7 @@ export class SongPanel {
   }
 
   refresh() {
+    this.introduction.hidden = !!this.app.media;
     const m = this.app.media;
     this.drop.classList.toggle('hidden', !!m);
     this.body.classList.toggle('hidden', !m);

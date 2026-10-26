@@ -43,9 +43,16 @@ export function toast(msg, kind = '') {
   toastId = setTimeout(() => (toastEl.className = 'toast'), kind === 'bad' ? 6500 : 3200);
 }
 
-// fila con etiqueta + control
+let fieldId = 0;
+// Native labels also let touch, mouse and voice users select the visible field name.
 export function field(label, control, hint) {
-  return h('div', { class: 'field' }, h('div', { class: 'lab' }, label, hint ? h('span', { class: 'hint' }, hint) : null), control);
+  const direct = control.matches('input, select, textarea');
+  const id = control.id || (control.id = 'field-' + ++fieldId);
+  const lab = h(direct ? 'label' : 'div', { class: 'lab', ...(direct ? { for: id } : { id: id + '-label' }) }, label, hint ? h('span', { class: 'hint' }, hint) : null);
+  if (!direct && !control.hasAttribute('aria-label') && !control.hasAttribute('aria-labelledby')) {
+    control.setAttribute('role', 'group'); control.setAttribute('aria-labelledby', lab.id);
+  }
+  return h('div', { class: 'field' }, lab, control);
 }
 
 // deslizador con valor visible

@@ -7,7 +7,7 @@ import { App } from './studio.js';
 const $ = (id) => document.getElementById(id);
 
 async function bootStudio() {
-  await loadFonts();
+  const fontsReady = loadFonts();
   const app = new App($('app'), $('audio'), $('audioFull'));
   window.__app = app;
   let restored = false;
@@ -15,6 +15,10 @@ async function bootStudio() {
     restored = await app.restoreLast();
   } catch (e) {}
   if (!restored) app.refreshAudio();
+  await fontsReady;
+  if (app.destroyed) return;
+  app.scene.typo.fm = {};
+  app.scene.resize();
   document.documentElement.classList.add('ready');
 }
 

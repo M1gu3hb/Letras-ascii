@@ -69,7 +69,7 @@ export class TextPanel {
       this.ta,
       this.count,
       this.undoBox,
-      h('div', { class: 'two' }, field('Al abrir dice', this.intro), field('Al terminar dice', this.outro)),
+      h('div', { class: 'two' }, field('Texto de inicio', this.intro), field('Mensaje final', this.outro)),
       h('details', { class: 'grp text-import' }, h('summary', {}, 'Importar letra o administrar tiempos'), h('div', { class: 'gbody' },
       h('div', { class: 'lab2' }, 'Traer tiempos de otro lado'),
       h('p', { class: 'muted small' }, 'Trae una letra con tiempos o un HTML exportado. El HTML recupera automáticamente el inicio de su tramo. Para otros archivos se usa 0:00; puedes indicar otro inicio aquí:'),

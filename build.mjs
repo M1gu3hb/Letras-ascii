@@ -3,6 +3,7 @@
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { editorDocument, crawlerFiles } from './scripts/site-document.mjs';
 
 const asciiOnly = (t) => t.replace(/[^\x00-\x7f]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 const js = asciiOnly((
@@ -11,7 +12,7 @@ const js = asciiOnly((
 
 // Las tipografías van como archivos aparte (site/fonts/). Al exportar el HTML final se incrustan en base64.
 const font = (family, weight, file, style = 'normal') =>
-  `@font-face{font-family:'${family}';font-weight:${weight};font-style:${style};font-display:block;src:url(fonts/${file}) format('woff2');}`;
+  `@font-face{font-family:'${family}';font-weight:${weight};font-style:${style};font-display:swap;src:url(fonts/${file}) format('woff2');}`;
 const fonts = [
   font('Nunito', 400, 'nunito-latin-400-normal.woff2'),
   font('Nunito', 700, 'nunito-latin-700-normal.woff2'),
@@ -28,26 +29,7 @@ const fonts = [
 ].join('\n');
 const css = fonts + '\n' + readFileSync('css/style.css', 'utf8') + '\n' + readFileSync('css/mobile.css', 'utf8');
 
-const html = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07040b">
-<meta name="robots" content="noindex">
-<title>Letras en ASCII</title>
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="app.css">
-</head>
-<body>
-<div id="app"></div>
-<audio id="audio" playsinline preload="auto"></audio>
-<audio id="audioFull" playsinline preload="auto"></audio>
-<script id="payload" type="application/json">null</script>
-<script src="app.js"></script>
-</body>
-</html>
-`;
+const html = editorDocument({ preview: !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production' });
 mkdirSync('site/fonts', { recursive: true });
 for (const f of readdirSync('assets/fonts')) copyFileSync(`assets/fonts/${f}`, `site/fonts/${f}`);
 writeFileSync('site/app.js', js);
@@ -57,5 +39,7 @@ for (const [entry, output] of [['js/player-entry.js', 'player.js'], ['js/audio-w
 }
 writeFileSync('site/app.css', css);
 writeFileSync('site/index.html', html);
+for (const [name, content] of Object.entries(crawlerFiles())) writeFileSync('site/' + name, content);
+for (const name of ['favicon.svg', 'social-card.png']) copyFileSync('assets/' + name, 'site/' + name);
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 10);
 console.log(`site/app.js ${(js.length / 1024).toFixed(0)} KB (${sha(js)})  site/app.css ${(css.length / 1024).toFixed(0)} KB (${sha(css)})`);

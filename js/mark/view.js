@@ -107,7 +107,7 @@ export function buildView(panel) {
     panel.doneAsk = h('p', { class: 'mask' }, '¿Quedó bien?');
     panel.previewBtn = act('btn primary big', '▶ Ver vista previa', () => panel.previewMarked());
     panel.nextBtn = act('btn alt big', 'Siguiente: Ajustar →', () => panel.goNext());
-    panel.correctBtn = act('btn ghost', 'Omitir ajuste: ir a Estilo', () => app.selectTab('style'));
+    panel.correctBtn = act('btn ghost', 'Omitir ajuste: ir a Estilo', () => app.selectTab('style', { focus: true }));
     panel.againBtn = act('btn ghost', '↻ Marcar otra vez', () => panel.startFresh());
     panel.undoDoneBtn = act('btn ghost', '↶ Deshacer la última', () => panel.undo());
     panel.doneBtns = h('div', { class: 'mbtnrow two' }, panel.againBtn, panel.undoDoneBtn);
