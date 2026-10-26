@@ -39,9 +39,11 @@ try {
  writeFileSync('site/recipient-test.html',html);
  const recipient=await context.newPage();watch(recipient,errors);await recipient.goto(`http://localhost:${port}/recipient-test.html`);await recipient.bringToFront();await recipient.waitForFunction(()=>document.documentElement.classList.contains('ready'));
  check(await recipient.getByRole('button',{name:'Reproducir',exact:true}).isVisible(),'recipient has an accessible play control');
+ await recipient.waitForFunction(()=>document.hasFocus(),null,{polling:100});
+ await recipient.evaluate(()=>{window.__recipientGestures=[];for(const type of ['pointerdown','mousedown','mouseup','click'])window.addEventListener(type,event=>{const trace=window.__recipientGestures;trace.push({type,trusted:event.isTrusted,target:event.target.tagName,text:event.target.textContent?.slice(0,35),focus:document.hasFocus()});if(trace.length>12)trace.shift()},{capture:true})});
  await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();
  try{await recipient.waitForFunction(()=>window.__player.state==='playing'&&!window.__player.audio.paused&&window.__player.audio.currentTime>.05,null,{polling:100})}
- catch(error){console.log('recipient audio diagnostic',JSON.stringify(await recipient.evaluate(()=>{const p=window.__player,a=p.audio;return{state:p.state,playError:p.lastPlayError,ready:a.readyState,paused:a.paused,seeking:a.seeking,position:a.currentTime,duration:a.duration,mediaError:a.error?.message,visibility:document.visibilityState}})));throw error}
+ catch(error){console.log('recipient audio diagnostic',JSON.stringify(await recipient.evaluate(()=>{const p=window.__player,a=p.audio;return{state:p.state,destroyed:p.destroyed,playError:p.lastPlayError,ready:a.readyState,paused:a.paused,seeking:a.seeking,position:a.currentTime,duration:a.duration,mediaError:a.error?.message,visibility:document.visibilityState,focus:document.hasFocus(),gestures:window.__recipientGestures}})));throw error}
  await recipient.getByRole('button',{name:'Pausar',exact:true}).click();check(await recipient.evaluate(()=>window.__player.state)==='paused','recipient play and pause control the real audio');
  await recipient.emulateMedia({reducedMotion:'reduce'});await recipient.waitForTimeout(100);check(await recipient.evaluate(()=>window.__scene.R.reduced),'reduced motion reaches the canvas engine');
  await recipient.getByLabel('Posición en la canción').press('Home'); await recipient.getByLabel('Posición en la canción').press('ArrowRight');await recipient.screenshot({path:'test/audit/recipient-desktop.png'});

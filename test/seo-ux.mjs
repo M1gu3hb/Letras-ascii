@@ -38,7 +38,7 @@ try{
  const devices=[['phone-320',320,568,true],['phone-390',390,700,true],['phone-land',844,390,true],['tablet-p',768,1024,true],['tablet-l',1180,820,true],['small-desktop',1024,680,false],['desktop',1440,900,false],['reflow-200',720,450,false]];
  for(const [name,width,height,touch]of devices){
   const context=await browser.newContext({viewport:{width,height},hasTouch:touch,isMobile:touch,acceptDownloads:true});
-  const page=await context.newPage();page.setDefaultTimeout(12000);watch(page,errors);await page.goto(origin);await ready(page);
+  const page=await context.newPage();page.setDefaultTimeout(12000);watch(page,errors);await page.goto(origin);await ready(page);await page.bringToFront();await page.waitForFunction(()=>document.hasFocus(),null,{polling:100});
   if(name==='phone-390')await page.screenshot({path:`${folder}/start-${kind}.png`});
   ok(await within(page.getByRole('button',{name:'Guía de uso',exact:true})),`${name}: help is visible and at least 44px`);
   ok(await page.getByRole('heading',{level:1}).count()===1,`${name}: runtime retains one H1`);
@@ -88,7 +88,7 @@ try{
    await page.waitForFunction(()=>!window.__app.panels.export.making);const fallback=page.getByRole('link',{name:'Abrir vista del destinatario',exact:true});
    ok(await fallback.isVisible()&&(await fallback.getAttribute('href')).startsWith('blob:'),'a blocked popup provides an explicit usable preview link');
    await fallback.scrollIntoViewIfNeeded();await page.screenshot({path:`${folder}/popup-recovery-${kind}.png`});
-   const preview=page.waitForEvent('popup');await fallback.click();const recipient=await preview;await recipient.bringToFront();await ready(recipient);
+   const preview=page.waitForEvent('popup');await fallback.click();const recipient=await preview;await recipient.bringToFront();await ready(recipient);await recipient.waitForFunction(()=>document.hasFocus(),null,{polling:100});
    ok(await recipient.getByRole('button',{name:'Reproducir',exact:true}).isVisible(),'the fallback link opens the actual recipient');
    await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();await recipient.waitForFunction(()=>!window.__player.audio.paused&&window.__player.audio.currentTime>.3);await recipient.getByRole('button',{name:'Pausar',exact:true}).click();
    ok(await recipient.evaluate(()=>window.__player.audio.paused&&window.__player.t>.3),'the recipient can play native audio and pause');await recipient.screenshot({path:`${folder}/recipient-${kind}.png`});await recipient.close();await page.bringToFront();
