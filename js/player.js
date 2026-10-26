@@ -15,6 +15,7 @@ export class Player {
     this.dur = 0;
     this.virtual = true;
     this.vT = 0;
+    this.seekTarget = null;
     this.vStamp = 0;
     this.rate = 1;
     this.loopClip = false;
@@ -35,6 +36,7 @@ export class Player {
       else if (this.auditionRange) { this.pause(); this.seek(this.auditionRange.b); }
       else this.finish();
     }, { signal: this.scope.signal });
+    audio.addEventListener('seeked', () => { if (!audio.seeking) { this.seekTarget = null; this.lastCT = -1; } }, { signal: this.scope.signal });
     if (mode === 'player') {
       const act = (e) => {
         if (e.type === 'keydown') {
@@ -54,6 +56,7 @@ export class Player {
 
   // url: audio del tramo (WAV o el original); sin url = reloj virtual de `dur` segundos
   setSource(url, dur) {
+    this.seekTarget = null;
     this.auditionRange = null;
     this.playEpoch = (this.playEpoch || 0) + 1;
     const a = this.audio;
@@ -169,9 +172,10 @@ export class Player {
     this.lastCT = -1;
     if (!this.virtual) {
       this.audio.volume = 1;
+      this.seekTarget = this.audio.readyState > 0 && (this.audio.seeking || Math.abs(this.audio.currentTime - tt) > 1e-6) ? tt : null;
       try {
         this.audio.currentTime = tt;
-      } catch (e) {}
+      } catch (e) { this.seekTarget = null; }
     }
     this.t = tt;
   }
@@ -221,6 +225,7 @@ export class Player {
   time(now) {
     if (this.virtual) return this.state === 'playing' ? this.vT + (now - this.vStamp) * this.rate : this.vT;
     const a = this.audio;
+    if (this.seekTarget != null) return this.seekTarget;
     const ct = a.currentTime;
     if (ct !== this.lastCT) {
       this.lastCT = ct;

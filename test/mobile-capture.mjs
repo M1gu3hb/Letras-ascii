@@ -22,6 +22,7 @@ async function open(width,height,strict=false){
   HTMLMediaElement.prototype.play=function(){note(this,'play.call');if(window.__rejectNextMediaPlay){window.__rejectNextMediaPlay=false;return Promise.reject(new DOMException('Simulated first play rejection','NotAllowedError'))}if(!gesture&&!unlocked.has(this))return Promise.reject(new DOMException('A real Start gesture is required','NotAllowedError'));unlocked.add(this);const pending=realPlay.call(this);pending.then(()=>note(this,'play.resolved'),error=>note(this,'play.rejected',error));return pending};
  });
  const page=await context.newPage();watch(page,errors);page.on('dialog',d=>d.accept());await page.goto(`http://localhost:${port}/`);await page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
+ await page.evaluate(()=>{window.__tapTrace=[];for(const name of ['pointerdown','pointerup','lostpointercapture'])document.addEventListener(name,event=>{if(!event.target.closest?.('.pad'))return;const a=window.__app,m=a.panels.mark;window.__tapTrace.push({event:name,id:event.pointerId,stamp:event.timeStamp,now:performance.now(),native:a.audio.currentTime,seeking:a.audio.seeking,t:a.player.t,cur:{...m.cur},hold:!!m.hold});if(window.__tapTrace.length>20)window.__tapTrace.shift()},true)});
  await page.setInputFiles('#songfile','test/media/kick120.wav');await page.waitForFunction(()=>window.__app.media&&!window.__app.loadController);return{page,context};
 }
 async function close(page,context){
@@ -42,7 +43,7 @@ try{
   const done=await page.evaluate(()=>window.__app.panels.mark.phase==='done');
   const start=done?page.getByRole('button',{name:'↻ Marcar otra vez',exact:true}):page.locator('.mcard.idle .primary');
   check(await start.isVisible(),`${width}×${height} ${fmt}: Start is available`);
-  if(!done){await openMarkOptions(page);await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap()}
+  if(!done){await openMarkOptions(page);await page.getByRole('button',{name:'Solo frases',exact:true}).tap();if(await page.locator('.mopts .switch input').isChecked())await page.locator('.mopts .switch').tap();if(await page.locator('.mopts-toggle').isVisible())await page.locator('.mopts-toggle').tap()}
   await start.tap();
   try {await page.waitForFunction(()=>window.__app.panels.mark.phase==='run'&&!window.__app.audio.paused)}
   catch(error){console.log('mobile start diagnostic',await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,reason:m.reason,countOn:m.countOn,player:a.player.state,paused:a.audio.paused,ready:a.audio.readyState,playError:a.player.lastPlayError,src:a.audio.currentSrc,error:a.audio.error?.message,tab:a.tab,active:document.activeElement?.outerHTML.slice(0,250),button:m.startBtn.getBoundingClientRect().toJSON(),panel:a.panelEl.getBoundingClientRect().toJSON(),scroll:m.el.scrollTop}}));throw error}
@@ -50,10 +51,11 @@ try{
   await page.locator('.pad').tap();await page.waitForTimeout(360);
   const first=await page.locator('.pad').boundingBox();await page.getByRole('button',{name:'Pausar',exact:true}).tap();await page.waitForTimeout(500);
   await page.locator('.mcard.pause .primary').tap();await page.waitForFunction(()=>window.__app.panels.mark.phase==='run');
-  await page.waitForFunction(()=>window.__app.player.t>window.__app.project.sync[0].t+.35);
+  await page.waitForFunction(()=>{const a=window.__app;return !a.audio.seeking&&a.audio.currentTime>a.project.sync[0].t+.35&&a.player.t>a.project.sync[0].t+.35});
   const resumed=await page.locator('.pad').boundingBox();check(Math.abs(first.y-resumed.y)<2,`${width}×${height} ${fmt}: capture target stays in place after pause/resume`);
-  await page.locator('.pad').tap();await page.waitForTimeout(360);await page.locator('.pad').tap();
-  await page.waitForFunction(()=>window.__app.panels.mark.phase==='done');
+  await page.locator('.pad').tap();await page.waitForFunction(()=>{const a=window.__app;return !a.audio.seeking&&a.audio.currentTime>a.panels.mark.lastMarkAbs()+.35});await page.locator('.pad').tap();
+  try{await page.waitForFunction(()=>window.__app.panels.mark.phase==='done')}
+  catch(error){console.log('capture diagnostic',JSON.stringify(await page.evaluate(()=>{const a=window.__app,m=a.panels.mark;return{phase:m.phase,mode:m.mode,cur:m.cur,sync:a.project.sync,native:a.audio.currentTime,seeking:a.audio.seeking,clock:a.player.t,trace:window.__tapTrace}})));throw error}
   check(await page.evaluate(()=>window.__app.project.sync.filter(Boolean).length===3),`${width}×${height} ${fmt}: three actual touches save three phrases`);
   if(fmt==='tall'&&width===390)await page.screenshot({path:`${folder}/after-tall-complete-${kind}.png`});await page.waitForFunction(()=>!window.__app.panels.mark.locked());
  }

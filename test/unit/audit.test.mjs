@@ -44,6 +44,16 @@ test('seeking away from the closing fade restores full volume',()=>{
  p.seek(1);assert.equal(audio.currentTime,1);assert.equal(audio.volume,1);
 });
 
+test('an asynchronous native seek cannot expose its old position as resumed playback',()=>{
+ const original=globalThis.requestAnimationFrame;globalThis.requestAnimationFrame=()=>0;
+ const audio=new EventTarget();let current=5;
+ Object.assign(audio,{readyState:4,seeking:false,paused:false,volume:1});Object.defineProperty(audio,'currentTime',{get:()=>current,set(){}});
+ let p;try{p=new Player({},audio,new EventTarget(),'studio');}finally{if(original)globalThis.requestAnimationFrame=original;else delete globalThis.requestAnimationFrame;}
+ Object.assign(p,{virtual:false,dur:10,rate:1,state:'playing'});p.seek(1);assert.equal(p.time(2),1,'hold the requested position until the native seek completes');
+ current=1.25;audio.dispatchEvent(new Event('seeked'));assert.equal(p.time(3),1.25);
+ p.seek(1.25);current=1.5;assert.equal(p.time(4),1.5,'a no-op seek must not freeze the clock waiting for an event');p.scope.abort();
+});
+
 test('a natural media end repeats an audition ending at the clip boundary',async()=>{
  const original=globalThis.requestAnimationFrame;globalThis.requestAnimationFrame=()=>0;
  const audio=new EventTarget();Object.assign(audio,{muted:false,volume:.1,currentTime:10,paused:true,pause(){this.paused=true},play(){this.paused=false;return Promise.resolve()}});
