@@ -90,4 +90,7 @@ try{
   await context.close();
  }
  assert.deepEqual(errors,[]);console.log(`${checks} adjustment checks passed`);
+}catch(error){
+ if(process.env.GITHUB_ACTIONS)console.error('::error::'+String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A'));
+ throw error;
 }finally{await browser.close();srv.close()}

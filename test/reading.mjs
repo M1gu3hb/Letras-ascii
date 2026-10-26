@@ -79,4 +79,7 @@ try{
  await page.evaluate(()=>window.__app.save());await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__app?.media&&!window.__app.loadController);
  check(await page.evaluate(()=>window.__app.project.style.mainMode==='normal'&&window.__app.project.over['0.1'].entryMs===0),'reload restores new settings and media from IndexedDB');
  await context.close();assert.deepEqual(errors,[]);console.log(`${checks} reading and export checks passed`);
+}catch(error){
+ if(process.env.GITHUB_ACTIONS)console.error('::error::'+String(error.stack||error).replaceAll('%','%25').replaceAll('\r','%0D').replaceAll('\n','%0A'));
+ throw error;
 }finally{await browser.close();srv.close()}
