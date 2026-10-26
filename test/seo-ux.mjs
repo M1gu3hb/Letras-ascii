@@ -7,6 +7,7 @@ const folder='test/audit/seo-ux',kind=process.env.PLAYWRIGHT_BROWSER||'chromium'
 const {srv,port}=serve('site'),origin=`http://localhost:${port}`,browser=await launch(),errors=[];let checks=0;
 const ok=(condition,message)=>{assert.ok(condition,message);checks++;console.log('ok',message)};
 const ready=page=>page.waitForFunction(()=>document.documentElement.classList.contains('ready'));
+const focused=async(page,selector)=>{try{await page.waitForFunction(s=>document.activeElement?.matches(s),selector,{polling:50})}catch(error){console.error('keyboard focus diagnostic',await page.evaluate(()=>({focus:document.hasFocus(),active:document.activeElement.outerHTML.slice(0,250)})));throw error}};
 const within=async locator=>locator.evaluate(el=>{const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return r.width>=44&&r.height>=44&&r.left>=-1&&r.right<=innerWidth+1&&r.top>=-1&&r.bottom<=innerHeight+1&&(el===hit||el.contains(hit))});
 try{
  const raw=await(await fetch(origin)).text();
@@ -43,8 +44,9 @@ try{
   ok(await within(page.getByRole('button',{name:'Guía de uso',exact:true})),`${name}: help is visible and at least 44px`);
   ok(await page.getByRole('heading',{level:1}).count()===1,`${name}: runtime retains one H1`);
   if(name==='phone-land'||name==='reflow-200')ok(await page.locator('.panel').evaluate(el=>el.clientWidth>=innerWidth*.85),`${name}: a folded preview returns the full width to editing`);
-  await page.keyboard.press('Tab');ok(await page.getByRole('link',{name:'Saltar al paso actual'}).evaluate(el=>el===document.activeElement),`${name}: keyboard can skip repeated navigation; active=${await page.evaluate(()=>document.activeElement.outerHTML.slice(0,160))}`);
-  await page.keyboard.press('Enter');ok(await page.getByRole('tabpanel').evaluate(el=>el===document.activeElement),`${name}: skip link focuses the active panel`);
+  await page.keyboard.press('Tab');await focused(page,'.skip-link');ok(await page.getByRole('link',{name:'Saltar al paso actual'}).evaluate(el=>el===document.activeElement),`${name}: keyboard can skip repeated navigation`);
+  await page.keyboard.press('Enter');await focused(page,'[role=tabpanel]:not([hidden])');ok(await page.getByRole('tabpanel').evaluate(el=>el===document.activeElement),`${name}: skip link focuses the active panel`);
+  await page.keyboard.press('Tab');await focused(page,'.step-footer .primary');ok(await page.locator('.step-footer').getByRole('button',{name:'Elegir canción o video',exact:true}).evaluate(el=>el===document.activeElement),`${name}: the next keyboard stop is the visible upload action, not a clipped input`);
   const projectName=page.getByRole('textbox',{name:'Nombre del proyecto'});await projectName.focus();
   ok(await projectName.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'),`${name}: project name has a visible keyboard focus indicator`);
   await page.getByRole('button',{name:'Guía de uso',exact:true}).click();

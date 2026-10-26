@@ -8,7 +8,7 @@ const ACCEPT = 'audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.mp4,.
 export class SongPanel {
   constructor(app) {
     this.app = app;
-    const input = h('input', { type: 'file', accept: ACCEPT, class: 'sr-only', id: 'songfile', 'aria-label': 'Elegir canción o video' });
+    const input = h('input', { type: 'file', accept: ACCEPT, class: 'sr-only', id: 'songfile', tabindex: '-1', 'aria-label': 'Elegir canción o video' });
     input.addEventListener('change', () => {
       const f = input.files && input.files[0];
       input.value = '';

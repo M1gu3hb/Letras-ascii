@@ -51,7 +51,7 @@ Se combinaron revisión visual, DOM y nombres accesibles, navegación real con t
 | S06 | En móvil la entrada no explicaba qué resultado se obtiene ni existía ayuda global. | Introducción breve y guía accesible desde cualquier etapa, con instrucciones de guardado y apertura del HTML. La ayuda pausa la audición antes de abrirse. |
 | S07 | Siguiente/Atrás o completar captura dejaban el foco en body o en el CTA anterior. | Foco explícito en el panel de destino, paneles enfocables y enlace para saltar navegación con `tabindex` explícito para WebKit. El foco de los diálogos vuelve a su botón de origen. |
 | S08 | Volver a Estilo cambiaba el scroll de 500 a 0. | Se conserva la posición por etapa y proyecto. Un proyecto diferente empieza con posiciones nuevas. |
-| S09 | `field()` creaba textos visuales sin labels nativos; tocarlos no enfocaba su campo. | Labels asociados para input/select/textarea y nombres para grupos. Los textos de inicio/final coinciden con el nombre accesible. |
+| S09 | `field()` creaba textos visuales sin labels nativos; tocarlos no enfocaba su campo. El selector oculto de archivos también recibía foco en una caja recortada de 1×1 px. | Labels asociados para input/select/textarea y nombres para grupos. Los textos de inicio/final coinciden con el nombre accesible. El recorrido de teclado usa la acción visible Elegir canción, sin detenerse en el input recortado. |
 | S10 | El nombre del proyecto anulaba el indicador de foco. | Se restaura `:focus-visible`, probado con modalidad de teclado. |
 | S11 | Un nombre sin espacios producía 664 px de contenido dentro de un diálogo de 356 px y ocultaba Borrar. | `min-width: 0` y partición de palabras; se comprueba tamaño y punto de toque del control. |
 | S12 | La tableta mostraba la vista previa permanentemente y no ofrecía el control Vista. | Se extiende el control plegable. En poco alto, plegarlo recupera también el ancho, evitando una columna vacía. |
@@ -83,7 +83,7 @@ npm test
 PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries seo-ux
 ```
 
-La batería unitaria contiene 57 casos. La nueva suite cubre 150 comprobaciones: documentos y recursos SEO, JavaScript desactivado, fuentes retenidas y fallo parcial de fuentes, ocho tamaños, etiquetas, foco, ayuda, captura nativa, retorno al scroll, Vista plegable, objetivos alcanzables, popup bloqueado y excepción, destinatario real y exclusión del HTML personal. Los casos se contabilizan por ejecución, no por captura.
+La batería unitaria contiene 57 casos. La nueva suite cubre 158 comprobaciones: documentos y recursos SEO, JavaScript desactivado, fuentes retenidas y fallo parcial de fuentes, ocho tamaños, etiquetas, foco, ayuda, captura nativa, retorno al scroll, Vista plegable, objetivos alcanzables, popup bloqueado y excepción, destinatario real y exclusión del HTML personal. Los casos se contabilizan por ejecución, no por captura.
 
 Matriz: 320×568, 390×700, 844×390, 768×1024, 1180×820, 1024×680, 1440×900 y 720×450. Este último representa el espacio CSS equivalente a una ventana de 1440×900 al 200%; no simula todos los efectos del zoom físico. En el teléfono de 390 px se reduce además la altura a 400 px mientras se escribe y se comprueba el toque del CTA; [Captura estable del espacio reducido](images/seo-ux/13-altura-reducida-despues.png). No se presenta como teclado virtual de un dispositivo físico.
 
