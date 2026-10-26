@@ -206,7 +206,7 @@ try{
   await fixture('export');await page.evaluate(()=>{const a=window.__app;a.project.text='Dentro\nSin marca\nFuera';a.project.sync=[{t:1},null,{t:20}];a.project.offset=0;a.project.clip={start:0,end:5};a.projectChanged();a.refreshAudio();a.emit('reset')});
   const download=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar el HTML',exact:true}).click();await(await download).saveAs('test/media/audit-export.html');
   const html=readFileSync('test/media/audit-export.html','utf8');assert.equal(readPayloadFromHtml(html).lines.length,3,'round trip retains the complete project');
-  const recipient=await context.newPage();watch(recipient,errors);try{await recipient.setContent(html);await recipient.waitForFunction(()=>window.__player);const text=await recipient.locator('.player-transcript').textContent();assert.ok(text.includes('Dentro')&&!text.includes('Sin marca')&&!text.includes('Fuera'),text);}finally{await recipient.close();}
+  const recipient=await context.newPage();watch(recipient,errors);try{await recipient.setContent(html);await recipient.waitForFunction(()=>window.__player);const text=await recipient.getByRole('region',{name:'Letra de la canción',exact:true}).textContent();assert.ok(text.includes('Dentro')&&!text.includes('Sin marca')&&!text.includes('Fuera'),text);}finally{await recipient.close();}
  });
  await check('destroy-stops-before-storage-finishes',async()=>{
   await fixture();await page.evaluate(()=>window.__app.persistence.flush());await page.getByRole('button',{name:'Reproducir',exact:true}).click();await page.waitForFunction(()=>!window.__app.audio.paused);

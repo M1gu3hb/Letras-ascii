@@ -67,8 +67,8 @@ try{
  await recipient.getByRole('button',{name:'Reproducir',exact:true}).click();await recipient.waitForFunction(()=>!window.__player.audio.paused);
  await recipient.getByRole('button',{name:'Pausar',exact:true}).click();await recipient.evaluate(()=>{window.__player.seek(1.18);window.__scene.render(1.18,'song')});
  await recipient.waitForTimeout(300);
- const standalone=await recipient.evaluate(()=>{const s=window.__scene;return{normal:s.textLayer.hero.length,zero:s.tl.lines[0].words[1].appearDur,inset:s.bottomInset,band:s.textLayer.band,controls:document.querySelector('.recipient-controls').getBoundingClientRect().y,ball:s.textLayer.ball}});
- check(standalone.normal>0&&standalone.zero===0&&standalone.band.y+standalone.band.h<=standalone.controls,'standalone normal text renders above recipient controls');assert.deepEqual(external,[]);
+ const standalone=await recipient.evaluate(()=>{const s=window.__scene;return{normal:s.textLayer.hero.length,zero:s.tl.lines[0].words[1].appearDur,inset:s.bottomInset||0,band:s.textLayer.band,height:s.r.H,controls:!!document.querySelector('.recipient-controls'),ball:s.textLayer.ball}});
+ check(standalone.normal>0&&standalone.zero===0&&standalone.inset===0&&!standalone.controls&&standalone.band.y+standalone.band.h<=standalone.height,'standalone artwork uses the full canvas without a controls panel');assert.deepEqual(external,[]);
  await recipient.screenshot({path:'test/audit/timeline/exported-karaoke-phone.png'});
  await recipient.close();
  await page.locator('#tab-text').click();await page.locator('.text-import summary').click();
