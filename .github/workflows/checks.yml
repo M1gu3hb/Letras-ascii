@@ -37,11 +37,12 @@ jobs:
       - name: WebKit regression suites
         run: |
           set +e
-          timeout --kill-after=10s 360s node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
+          timeout --kill-after=10s 360s dbus-run-session -- xvfb-run -a node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries 2>&1 | tee /tmp/letras-webkit-checks.log
           test_status=${PIPESTATUS[0]}
           exit "$test_status"
         env:
           PLAYWRIGHT_BROWSER: webkit
+          PLAYWRIGHT_HEADLESS: 'false'
       - name: Report WebKit failure context
         if: failure()
         run: |

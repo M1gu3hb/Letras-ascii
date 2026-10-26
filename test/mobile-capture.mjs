@@ -4,7 +4,7 @@ import {chromium,webkit} from 'playwright-core';
 import {serve,watch,openMarkOptions} from './lib.mjs';
 import '../scripts/fixtures.mjs';
 const kind=process.env.PLAYWRIGHT_BROWSER||'chromium',type={chromium,webkit}[kind];
-const launchOptions={executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]};
+const launchOptions={headless:process.env.PLAYWRIGHT_HEADLESS!=='false',executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH||type.executablePath(),args:kind==='chromium'?['--no-sandbox','--autoplay-policy=document-user-activation-required']:[]};
 let browser=await type.launch(launchOptions);
 const {srv,port}=serve('site');const errors=[];let count=0;
 const check=(ok,msg)=>{assert.ok(ok,msg);console.log('ok',++count,msg)};

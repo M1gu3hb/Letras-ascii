@@ -140,7 +140,7 @@ npm run test:unit
 npm run build
 npx playwright-core install --with-deps chromium webkit
 npm run test:browser
-PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries
+PLAYWRIGHT_BROWSER=webkit PLAYWRIGHT_HEADLESS=false dbus-run-session -- xvfb-run -a node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries
 ```
 
 La batería unitaria contiene 53 pruebas: 29 existentes y 24 nuevas. Chromium cubre 16 suites; WebKit cubre siete, incluida la nueva auditoría de 30 casos. Durante la revisión, la batería completa detectó una discrepancia adicional de 50/80 ms entre campo y tira; tras corregirla se repitieron `words`, `adjust` (101 comprobaciones) y `audit-boundaries`, y CI vuelve a ejecutar la batería completa sobre el commit del PR.
@@ -157,7 +157,7 @@ cp test/unit/audit.test.mjs "$audit_base/test/unit/"
 node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 24 fallos en la base
 ```
 
-Los fixtures de la nueva suite usan un proceso WebKit por caso para aislar los pipelines nativos de medios. Se conservan el inicio mediante gesto real, la cuenta silenciosa, la reproducción efectiva y las comparaciones estrictas. Cada suite WebKit tiene un límite de 180 s y el workflow publica en anotaciones el contexto de un fallo o bloqueo. La preparación de audio por gesto incluye trazas nativas acotadas para diagnosticar rechazos de reproducción.
+CI usa el backend oficial WebKit GTK con una sesión D-Bus y pantalla virtual Xvfb. El backend WPE sin interfaz también se comprobó localmente; mostró bloqueos intermitentes al sustituir fuentes de audio, registrados durante esta revisión. Los fixtures de la nueva suite usan un proceso WebKit por caso para aislar los pipelines nativos de medios. Se conservan el inicio mediante gesto real, la cuenta silenciosa, la reproducción efectiva y las comparaciones estrictas. Cada suite WebKit tiene un límite de 180 s y el workflow publica en anotaciones el contexto de un fallo o bloqueo. La preparación de audio por gesto incluye trazas nativas acotadas para diagnosticar rechazos de reproducción.
 
 Los resultados finales de las suites, revisión e integración se registran en el PR asociado. La primera ejecución de WebKit en CI detectó una carrera en el fixture del contador: asignaba un clip nuevo sin emitir su evento y leía el contador del clip anterior antes del rebuild diferido. La regresión se corrigió para editar el campo real de final de tramo y después comprobar la estadística; conserva la comparación estricta con los golpes analizados. No se relajó el resultado esperado ni se añadió un reintento. La aprobación requiere lint, unitarias, build y ambas tareas de CI en el mismo commit. La comprobación pública posterior contrasta los hashes de los tres assets principales con ese build y reproduce el HTML realmente descargado en un documento independiente con la red desconectada.
 

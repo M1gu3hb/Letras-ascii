@@ -23,7 +23,10 @@ const check=async(name,run)=>{
   if(kind==='webkit'){if(context){await context.close();await browser.close();browser=await launch()}await open()}
   await run();passed.push(name);console.log('ok',name);
  }
- catch(error){failures.push({name,error:error.message});console.error('FAIL',name,error.message);await page.screenshot({path:`${folder}/${phase}-${kind}-${name}.png`}).catch(()=>{});}
+ catch(error){
+  const diagnostic=await page.evaluate(()=>{const a=window.__app;return{state:a?.player.state,playError:a?.player.lastPlayError,ready:a?.audio.readyState,mediaError:a?.audio.error?.message,clip:a?.project.clip,duration:a?.player.dur,tab:a?.tab}}).catch(()=>null);
+  failures.push({name,error:error.message,diagnostic});console.error('FAIL',name,error.message,JSON.stringify(diagnostic));await page.screenshot({path:`${folder}/${phase}-${kind}-${name}.png`}).catch(()=>{});
+ }
 };
 const fixture=async(tab='words')=>{
  await page.evaluate(({p,tab})=>{const a=window.__app;a.closeProjects?.();if(a.theaterOn)a.closeTheater();a.player.pause();a.project={...p,song:a.project.song};a.projectChanged();a.refreshAudio();a.emit('reset');a.selectTab('words');a.panels.words.select(0,1,{play:false});a.panels.words.audition.loop=false;a.selectTab(tab);a.history.reset();},{tab,p:{...newProject(),text:'Luna junto a ti\nSiempre música',sync:[{t:13,wt:[13,14,15,16],wd:[.2,.2,.2,.4]},{t:20,wt:[20,21],wd:[.2,.4]}],clip:{start:12,end:30}}});

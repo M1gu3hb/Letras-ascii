@@ -21,7 +21,7 @@ export async function launch(opts = {}) {
   const kind = process.env.PLAYWRIGHT_BROWSER || 'chromium';
   const type = { chromium, webkit, firefox }[kind];
   if (!type) throw new Error('Unknown PLAYWRIGHT_BROWSER: ' + kind);
-  const b = await type.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || type.executablePath(), args: [...(kind === 'chromium' ? ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] : []), ...(opts.args || [])] });
+  const b = await type.launch({ headless: process.env.PLAYWRIGHT_HEADLESS !== 'false', executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || type.executablePath(), args: [...(kind === 'chromium' ? ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] : []), ...(opts.args || [])] });
   return b;
 }
 export function watch(page, errs) {

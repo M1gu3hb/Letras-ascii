@@ -61,7 +61,7 @@ Ver `docs/validacion-por-etapas.md` para cambios y pruebas, y `docs/auditoria-in
 
 ## Reauditoría
 
-`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries` tras instalar WebKit y sus dependencias. Eso no certifica Safari o iOS físicos.
+`docs/reauditoria.md` contrasta la propuesta original con el producto y registra los casos añadidos. `test/reaudit.mjs` cubre recuperación/cancelación, exportación concurrente, importación real y deshacer, recaptura de frase, montaje bajo subruta, desmontaje y navegación del destinatario. La matriz UX cubre 14 dimensiones, incluidas las de la auditoría original. El flujo también se ejecuta en WebKit en GitHub Actions: `PLAYWRIGHT_BROWSER=webkit PLAYWRIGHT_HEADLESS=false dbus-run-session -- xvfb-run -a node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries` tras instalar WebKit y sus dependencias. CI utiliza WebKit GTK con D-Bus y Xvfb; el modo sin interfaz sigue disponible para diagnóstico local. Eso no certifica Safari o iOS físicos.
 
 ## Experiencia en teléfono
 
