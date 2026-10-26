@@ -177,3 +177,16 @@ test('a no-op timing edit does not silently materialize or change phrase marks',
  self.ensureWordLevel=src=>Timing.ensureWordLevel(self,src);self.limitsAbs=(...args)=>Timing.limitsAbs(self,...args);
  const before=structuredClone(p.sync);assert.equal(Timing.setStartAbs(self,0,0,1),false);assert.deepEqual(p.sync,before);
 });
+
+test('unloading full-song audio detaches the decoder before releasing its blob URL',async()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'window');
+ Object.defineProperty(globalThis,'window',{value:{matchMedia:()=>({matches:false})},configurable:true});
+ let App;try{({App}=await import('../../js/studio.js'));}finally{if(descriptor)Object.defineProperty(globalThis,'window',descriptor);else delete globalThis.window;}
+ const audio=new EventTarget();let attr='blob:old',loads=0;
+ Object.assign(audio,{currentSrc:'blob:old',pause(){},getAttribute:()=>attr,removeAttribute(){attr=null},load(){loads++}});
+ const app={audioFull:audio,fullUrl:'blob:old',media:null},revoked=[],original=URL.revokeObjectURL;URL.revokeObjectURL=url=>revoked.push(url);
+ try{
+  App.prototype.refreshFull.call(app);assert.equal(loads,1);assert.equal(attr,null);assert.equal(app.fullUrl,null);assert.deepEqual(revoked,[],'the decoder still owns the old source');
+  audio.currentSrc='';audio.dispatchEvent(new Event('emptied'));assert.deepEqual(revoked,['blob:old']);audio.dispatchEvent(new Event('error'));assert.deepEqual(revoked,['blob:old']);
+ }finally{URL.revokeObjectURL=original;}
+});

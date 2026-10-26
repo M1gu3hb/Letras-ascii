@@ -4,6 +4,7 @@ import { Scene } from './scene.js';
 import { Player } from './player.js';
 import { modelOf } from './project.js';
 import { loadFonts } from './fonts.js';
+import { retireMediaUrl } from './lifecycle.js';
 const $ = (id) => document.getElementById(id);
 function b64ToBytes(b64) {
   const bin = atob(b64.trim());
@@ -67,7 +68,7 @@ export async function bootPlayer(payload) {
   const timer = setInterval(update, 200); update();
   window.addEventListener('pagehide', (event) => {
     if (event.persisted) { if (player.state === 'playing') player.pause(); return; }
-    clearInterval(timer); clearTimeout(rt); controlsObserver.disconnect(); player.destroy(); URL.revokeObjectURL(url);
+    clearInterval(timer); clearTimeout(rt); controlsObserver.disconnect(); retireMediaUrl(audio, url); player.destroy();
   });
   window.addEventListener('pageshow', (event) => { if (event.persisted) { scene.resize(); update(); } });
   window.__player = player;

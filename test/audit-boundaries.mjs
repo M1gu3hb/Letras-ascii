@@ -154,7 +154,7 @@ try{
    await fixture('style');await page.emulateMedia({reducedMotion:'no-preference'});
    await page.evaluate(()=>{const a=window.__app;a.project.text='';a.project.sync=[];a.projectChanged();a.rebuild()});
    await page.waitForFunction(()=>window.__app.player.demo);await page.emulateMedia({reducedMotion:'reduce'});
-   await page.waitForFunction(()=>window.__app.scene.motionQuery.matches);assert.equal(await page.evaluate(()=>window.__app.player.demo),false);
+   await page.waitForFunction(()=>window.__app.scene.motionQuery.matches&&!window.__app.player.demo);assert.equal(await page.evaluate(()=>window.__app.player.demo),false);
   }finally{await page.emulateMedia({reducedMotion:'no-preference'});}
  });
  await check('invalid-import-offset-preserves-work',async()=>{

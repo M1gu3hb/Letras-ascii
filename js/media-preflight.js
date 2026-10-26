@@ -1,3 +1,5 @@
+import { retireMediaUrl } from './lifecycle.js';
+
 export const abortIfNeeded = (signal) => { if (signal?.aborted) throw new DOMException('Carga cancelada', 'AbortError'); };
 export function mediaLimits() {
   const constrained = typeof navigator !== 'undefined' && ((navigator.deviceMemory && navigator.deviceMemory <= 4) || matchMedia('(pointer: coarse)').matches);
@@ -21,7 +23,7 @@ export function probeDuration(file, signal) {
       clearTimeout(timer); signal?.removeEventListener('abort', abort);
       const duration = audio.duration;
       audio.onloadedmetadata = null; audio.onerror = null;
-      audio.removeAttribute('src'); audio.load(); URL.revokeObjectURL(url);
+      retireMediaUrl(audio, url); audio.removeAttribute('src'); audio.load();
       error ? reject(error) : resolve(duration);
     };
     const abort = () => finish(new DOMException('Carga cancelada', 'AbortError'));

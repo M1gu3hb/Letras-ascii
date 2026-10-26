@@ -20,6 +20,8 @@ flowchart TD
   U --> AUDIO[Preflight, decode, análisis y worker]
   AUDIO --> PLAYER[Player: reloj, seek confirmado, rate, pausa y fin]
   AUDIO --> WAVE[Onda y picos]
+  AUDIO --> URL[URLs de audio: liberar tras desconectar el recurso nativo]
+  URL --> PLAYER
   UI --> READY[preparePlayback: aplica cambios pendientes dentro del gesto]
   READY --> PLAYER
   PLAYER --> MARK[Mark: cuenta, captura y recuperación]
@@ -59,7 +61,7 @@ El diagrama guía la búsqueda por fronteras: una acción debe modificar el proy
 
 ## Registro de hallazgos
 
-Los casos se buscaron siguiendo las transiciones del diagrama, no solo comprobando que cada pantalla abriera. Las 25 regresiones unitarias finales se ejecutaron además contra una copia limpia del código de `117097d`: las 25 fallaron. Las 23 primeras regresiones de navegador fallaron también antes de las correcciones. Después se añadieron pruebas de entradas adversas, bordes y precisión hasta completar 30 casos de navegador. Los nombres siguientes corresponden a pruebas ejecutables de `test/unit/audit.test.mjs` y `test/audit-boundaries.mjs`.
+Los casos se buscaron siguiendo las transiciones del diagrama, no solo comprobando que cada pantalla abriera. Las 26 regresiones unitarias finales se ejecutaron además contra una copia limpia del código de `117097d`: las 26 fallaron. Las 23 primeras regresiones de navegador fallaron también antes de las correcciones. Después se añadieron pruebas de entradas adversas, bordes y precisión hasta completar 30 casos de navegador. Los nombres siguientes corresponden a pruebas ejecutables de `test/unit/audit.test.mjs` y `test/audit-boundaries.mjs`.
 
 | ID | Disparador y fallo anterior | Causa y corrección | Regresión |
 |---|---|---|---|
@@ -101,6 +103,7 @@ Los casos se buscaron siguiendo las transiciones del diagrama, no solo comproban
 | A35 | Reproducir inmediatamente después de editar el recorte podía empezar con el audio anterior y detenerse 260 ms después. | La actualización diferida seguía pendiente durante el nuevo gesto. `preparePlayback()` aplica cambios visuales y de audio pendientes antes de iniciar; una actualización explícita cancela la diferida anterior. Se cubren transporte, prueba de tramo, A–B y captura. | `clip-edit-immediate-play-uses-new-audio`, `clip-edit-countdown-keeps-its-gesture`, regresiones de `debounce.flush` |
 
 | A36 | Un seek asíncrono podía volver a mostrar la posición anterior mientras el audio todavía estaba buscando, y aparentar avance prematuro al reanudar. | El reloj leía el `currentTime` antiguo inmediatamente después de asignar el nuevo. Conserva el destino hasta `seeked`; un seek sin cambio conserva el avance normal. La captura espera el avance nativo después de una pausa. | `asynchronous native seek`, captura móvil por gesto tras pausa/reanudación |
+| A37 | Cambiar o cerrar audio podía revocar una URL mientras WebKit aún leía el recurso anterior; quitar la canción completa tampoco reiniciaba su decodificador. | La liberación precedía a la desconexión nativa. Se descarga siempre la fuente completa y se revoca cada URL después del evento que confirma el cambio de recurso. Se cubren preflight, editor y destinatario. | `unloading full-song audio`, consola sin errores en `reaudit` |
 
 Además se retiró el renderizado antiguo de contexto/bolita que ya había sido sustituido por `TextLayer`, y el modo normal dejó de rasterizar sprites ASCII invisibles. Se mantienen las comprobaciones de píxeles, geometría y exportación. Lint incluye ahora todos los scripts y pruebas, la nueva suite se ejecuta en ambos jobs de CI, se fijó Chromium en Ubuntu 24.04 y WebKit en macOS 15, con acciones oficiales v6 ancladas por SHA y runtime Node 24, y se retiró `main: index.js`, que apuntaba a un archivo inexistente en este frontend privado.
 
@@ -145,7 +148,7 @@ npm run test:browser
 PLAYWRIGHT_BROWSER=webkit node scripts/test-browser.mjs smoke reliability reaudit mobile-capture adjust reading audit-boundaries
 ```
 
-La batería unitaria contiene 54 pruebas: 29 existentes y 25 nuevas. Chromium cubre 16 suites; WebKit cubre siete, incluida la nueva auditoría de 30 casos. Durante la revisión, la batería completa detectó una discrepancia adicional de 50/80 ms entre campo y tira; tras corregirla se repitieron `words`, `adjust` (101 comprobaciones) y `audit-boundaries`, y CI vuelve a ejecutar la batería completa sobre el commit del PR.
+La batería unitaria contiene 55 pruebas: 29 existentes y 26 nuevas. Chromium cubre 16 suites; WebKit cubre siete, incluida la nueva auditoría de 30 casos. Durante la revisión, la batería completa detectó una discrepancia adicional de 50/80 ms entre campo y tira; tras corregirla se repitieron `words`, `adjust` (101 comprobaciones) y `audit-boundaries`, y CI vuelve a ejecutar la batería completa sobre el commit del PR.
 
 `PLAYWRIGHT_EXECUTABLE_PATH=/ruta/a/chromium` selecciona un Chromium instalado. No se debe reutilizar esa variable al ejecutar WebKit. Las pruebas usan medios sintéticos y no necesitan credenciales ni música personal. `npm audit --json` no encontró vulnerabilidades en el árbol de dependencias auditado; no hubo cambios de versión ni de lockfile.
 
@@ -156,7 +159,7 @@ audit_base=$(mktemp -d)
 git archive 117097d js package.json | tar -x -C "$audit_base"
 mkdir -p "$audit_base/test/unit"
 cp test/unit/audit.test.mjs "$audit_base/test/unit/"
-node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 25 fallos en la base
+node --test "$audit_base/test/unit/audit.test.mjs" # se esperan 26 fallos en la base
 ```
 
 CI ejecuta WebKit en macOS 15 con su sistema nativo de medios. Los backends Linux WPE y GTK se contrastaron durante la revisión y mostraron bloqueos de reproducción y preparación del entorno. Las comprobaciones de viewport esperan a que termine el redimensionado y conservan el umbral de dos píxeles. Los fixtures de la nueva suite usan un proceso WebKit por caso para aislar los pipelines nativos de medios. Se conservan el inicio mediante gesto real, la cuenta silenciosa, la reproducción efectiva y las comparaciones estrictas. Cada suite WebKit tiene un límite de 180 s y el workflow publica en anotaciones el contexto de un fallo o bloqueo. La preparación de audio por gesto incluye trazas nativas acotadas para diagnosticar rechazos de reproducción.

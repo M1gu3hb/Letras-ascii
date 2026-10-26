@@ -1,5 +1,5 @@
 import { buildNavigation } from './studio/navigation.js';
-import { Lifecycle } from './lifecycle.js';
+import { Lifecycle, retireMediaUrl } from './lifecycle.js';
 import { Autosave } from './storage/autosave.js';
 import { EditHistory } from './edit-history.js';
 import { getPreference as lsGet, setPreference as lsSet } from './storage/preferences.js';
@@ -536,10 +536,10 @@ export class App {
     if (this.media) {
       const ab = wavOf(this.media, clip.start, clip.end, { mono: dur > 90 });
       const url = blobUrl(ab);
+      retireMediaUrl(this.audio, this.clipUrl);
       this.player.setSource(url, dur);
-      if (this.clipUrl) URL.revokeObjectURL(this.clipUrl);
       this.clipUrl = url;
-    } else this.player.setSource(null, dur);
+    } else { retireMediaUrl(this.audio, this.clipUrl); this.player.setSource(null, dur); this.clipUrl = null; }
     this.setRate(+this.rateSel.value);
     this.paintTransport();
     this.paintTime();
@@ -549,15 +549,13 @@ export class App {
   preparePlayback() { this.rebuildSoon.flush(); this.refreshAudioSoon.flush(); }
 
   refreshFull() {
-    if (this.fullUrl) URL.revokeObjectURL(this.fullUrl);
-    this.fullUrl = null;
-    if (!this.media) {
-      this.audioFull.removeAttribute('src');
-      return;
-    }
-    this.fullUrl = URL.createObjectURL(this.file);
-    this.audioFull.src = this.fullUrl;
+    const next = this.media ? URL.createObjectURL(this.file) : null;
+    retireMediaUrl(this.audioFull, this.fullUrl);
+    this.audioFull.pause();
+    this.audioFull.removeAttribute('src');
+    if (next) this.audioFull.src = next;
     this.audioFull.load();
+    this.fullUrl = next;
   }
 
   // ───────────── archivos y proyectos ─────────────
@@ -605,9 +603,9 @@ export class App {
     this.scope.destroy();
     clearInterval(this.ticker); clearTimeout(this.barT);
     this.rebuildSoon.cancel(); this.refreshAudioSoon.cancel();
+    retireMediaUrl(this.audio, this.clipUrl); retireMediaUrl(this.audioFull, this.fullUrl);
+    this.clipUrl = this.fullUrl = null;
     this.player.destroy(); this.audioFull.pause(); this.audioFull.removeAttribute('src'); this.audioFull.load();
-    if (this.clipUrl) URL.revokeObjectURL(this.clipUrl);
-    if (this.fullUrl) URL.revokeObjectURL(this.fullUrl);
     await this.persistence.flush();
     this.listeners = {}; this.root.replaceChildren(); this.root.inert = false;
     document.documentElement.classList.remove('studio-page');
