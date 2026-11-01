@@ -2,8 +2,8 @@
 import { clamp, smooth } from './util.js';
 
 // Paleta: crema / rosa / ámbar / lavanda / blanco / rubor / durazno / rosa profundo + colores neón
-export const KC = { CREAM: 0, ROSE: 1, AMBER: 2, LAV: 3, WHITE: 4, BLUSH: 5, PEACH: 6, DEEP: 7, CYAN: 8, MINT: 9, GOLD: 10, VIOLET: 11, RUBY: 12, ICE: 13, ORANGE: 14, FUCHSIA: 15 };
-export const NCOL = 16;
+export const KC = { CREAM: 0, ROSE: 1, AMBER: 2, LAV: 3, WHITE: 4, BLUSH: 5, PEACH: 6, DEEP: 7, CYAN: 8, MINT: 9, GOLD: 10, VIOLET: 11, RUBY: 12, ICE: 13, ORANGE: 14, FUCHSIA: 15, ROYAL: 16, SKY: 17 };
+export const NCOL = 18;
 const PAL = [
   [255, 236, 222],
   [255, 112, 150],
@@ -21,8 +21,14 @@ const PAL = [
   [206, 236, 255],
   [255, 138, 58],
   [255, 84, 214],
+  [84, 128, 255], // azul rey
+  [156, 194, 255], // azul cielo
 ];
 const hex = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+const BASE = '#03050f'; // negro azulado: el fondo de todo
+const EDGE = '#03040c'; // borde del resplandor (se funde con el fondo)
+// reacciones a la música que pinta flush(): se llena cada cuadro desde Scene (sin crear objetos nuevos)
+const NO_FX = { pulse: 0, lift: 0, bloom: 0, bloomScale: 1, flash: 0, flashMix: 0, shakeX: 0, shakeY: 0, boost: 0 };
 const LEVEL_ALPHA = [0.34, 0.5, 0.66, 0.8, 0.92, 1];
 
 // Rampas de densidad (de vacío a sólido). Índice = "paleta de relleno".
@@ -127,7 +133,7 @@ export class Renderer {
     this.lists = [];
     this.counts = new Int32Array(NCOL * 6);
     this.styles = [];
-    this.tint = [[43, 18, 54], [21, 10, 29]];
+    this.tint = [[16, 30, 92], [5, 10, 38]];
     for (let k = 0; k < NCOL; k++) {
       for (let l = 0; l < 6; l++) {
         const [r, g, b] = PAL[k];
@@ -135,6 +141,9 @@ export class Renderer {
       }
     }
     this.bgGrad = null;
+    this.bloomImg = null; // resplandor azul de los graves
+    this.flashA = null; // destello del drop: blanco…
+    this.flashB = null; // …que se apaga en azul
     // personalización del ASCII (los valores por defecto dejan todo exactamente como siempre)
     this.density = 1; // detalle de la rejilla: más alto = más caracteres, más chicos
     this.bold = false; // caracteres en negrita
@@ -211,7 +220,52 @@ export class Renderer {
     }
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.makeGlows();
     this.setTint(this.tint[0], this.tint[1]);
+  }
+
+  // Resplandor de los graves y destello del drop. Son degradados muy suaves: se pintan UNA vez por tamaño en un lienzo
+  // chico (1/4) y cada cuadro solo se estiran con drawImage, que cuesta mucho menos que evaluar un degradado radial.
+  makeGlows() {
+    const { W, H } = this;
+    const S = 4;
+    const cx = W * 0.5;
+    const cy = H * 0.44;
+    const R = Math.max(H * 0.62, W * 0.55);
+    const F = Math.hypot(W, H) * 0.62;
+    // [x, y, ancho, alto] en px del escenario donde se estira cada sprite
+    this.glowBox = [cx - R, cy - R, R * 2, R * 2];
+    const paint = (w, h, ox, oy, rad, stops) => {
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(4, Math.ceil(w / S));
+      cv.height = Math.max(4, Math.ceil(h / S));
+      const c = cv.getContext('2d');
+      const gr = c.createRadialGradient((cx - ox) / S, (cy - oy) / S, 0, (cx - ox) / S, (cy - oy) / S, rad / S);
+      for (const [o, col] of stops) gr.addColorStop(o, col);
+      c.fillStyle = gr;
+      c.fillRect(0, 0, cv.width, cv.height);
+      return cv;
+    };
+    this.bloomImg = paint(R * 2, R * 2, cx - R, cy - R, R, [
+      [0, 'rgba(47,91,255,0.9)'],
+      [0.22, 'rgba(40,78,236,0.55)'],
+      [0.5, 'rgba(26,52,178,0.2)'],
+      [0.78, 'rgba(14,28,110,0.05)'],
+      [1, 'rgba(10,20,90,0)'],
+    ]);
+    this.flashA = paint(W, H, 0, 0, F, [
+      [0, 'rgba(255,255,255,1)'],
+      [0.16, 'rgba(226,236,255,0.78)'],
+      [0.42, 'rgba(96,136,255,0.38)'],
+      [0.75, 'rgba(60,100,255,0.14)'],
+      [1, 'rgba(47,91,255,0.03)'],
+    ]);
+    this.flashB = paint(W, H, 0, 0, F, [
+      [0, 'rgba(74,118,255,0.95)'],
+      [0.4, 'rgba(47,91,255,0.4)'],
+      [1, 'rgba(30,60,220,0)'],
+    ]);
+    this.glowC = [cx, cy];
   }
 
   // colores del resplandor de fondo (interior, medio); se llama cada cuadro con la mezcla de ambientes
@@ -222,27 +276,55 @@ export class Renderer {
     const g = this.ctx.createRadialGradient(W * 0.5, H * 0.42, 0, W * 0.5, H * 0.42, Math.max(W, H) * 0.75);
     g.addColorStop(0, hex(a));
     g.addColorStop(0.55, hex(b));
-    g.addColorStop(1, '#07040b');
+    g.addColorStop(1, EDGE);
     this.bgGrad = g;
   }
 
   flush(env) {
-    const { ctx, grid, lists, counts, cellW, cellH, fs, offY } = this;
+    const { ctx, grid, lists, counts, cellW, cellH, fs, offY, dpr } = this;
+    const fx = env || NO_FX;
     const cols = grid.cols;
     const n = cols * grid.rows;
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.fillStyle = '#07040b';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = BASE;
     ctx.fillRect(0, 0, this.W, this.H);
-    ctx.globalAlpha = clamp(0.62 + (env ? env.pulse * 0.3 : 0), 0, 1);
+    ctx.globalAlpha = clamp(0.62 + fx.pulse * 0.3 + fx.lift, 0, 1);
     ctx.fillStyle = this.bgGrad;
     ctx.fillRect(0, 0, this.W, this.H);
+    // resplandor azul de los graves (detrás de los caracteres) y destello del drop; ambos aditivos
+    if (fx.bloom > 0.01 || fx.flash > 0.004) {
+      ctx.globalCompositeOperation = 'lighter';
+      if (fx.bloom > 0.01) {
+        const [cx, cy] = this.glowC;
+        const [bx, by, bw, bh] = this.glowBox;
+        const s = fx.bloomScale;
+        ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * cx * (1 - s), dpr * cy * (1 - s));
+        ctx.globalAlpha = fx.bloom > 1 ? 1 : fx.bloom;
+        ctx.drawImage(this.bloomImg, bx, by, bw, bh);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      if (fx.flash > 0.004) {
+        const k = fx.flashMix;
+        if (k < 0.98) {
+          ctx.globalAlpha = fx.flash * (1 - k);
+          ctx.drawImage(this.flashA, 0, 0, this.W, this.H);
+        }
+        if (k > 0.02) {
+          ctx.globalAlpha = fx.flash * k;
+          ctx.drawImage(this.flashB, 0, 0, this.W, this.H);
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
     ctx.globalAlpha = 1;
+    // sacudida de cámara: solo mueve los caracteres (el fondo y la letra del karaoke se quedan quietos)
+    if (fx.shakeX || fx.shakeY) ctx.setTransform(dpr, 0, 0, dpr, fx.shakeX * dpr, fx.shakeY * dpr);
 
     counts.fill(0);
     const vig = this.vig;
     const Ig = grid.I;
     const Kg = grid.K;
-    const gain = this.gain;
+    const gain = this.gain * (1 + fx.boost);
     for (let i = 0; i < n; i++) {
       const raw = Ig[i];
       if (raw <= 0.03) continue;
@@ -280,5 +362,6 @@ export class Renderer {
         ctx.fillText(CH[code], x * cellW, base + y * cellH);
       }
     }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 }
