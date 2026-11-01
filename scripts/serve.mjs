@@ -1,14 +1,15 @@
 // Servidor estático mínimo para probar site/ en local: `npm run dev` (compila y sirve) o `npm run serve`.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize, sep } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 
-const root = normalize(process.argv[2] || 'site');
+const root = resolve(process.argv[2] || 'site');
 const port = Number(process.env.PORT) || 5173;
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
 
 createServer(async (req, res) => {
-  const path = decodeURIComponent(new URL(req.url, 'http://local').pathname);
+  let path;
+  try { path = decodeURIComponent(new URL(req.url, 'http://local').pathname); } catch { res.writeHead(400).end(); return; }
   const file = normalize(join(root, path === '/' ? 'index.html' : path));
   if (!file.startsWith(root + sep) && file !== root) { res.writeHead(403).end(); return; }
   try {

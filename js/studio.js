@@ -576,7 +576,7 @@ export class App {
 
   refreshEnergy() {
     const clip = this.clip();
-    if (this.media && (!this.player.demo || this.kind === 'real')) this.scene.setEnergy(this.media.energy, clip.start);
+    if (this.media && (!this.player.demo || this.kind === 'real')) this.scene.setEnergy(this.media.energy, clip.start, clip.end);
     else this.scene.setEnergy(fakeEnergy(clip.end - clip.start + 2), 0);
   }
   refreshAudio() {

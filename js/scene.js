@@ -77,7 +77,8 @@ export class Scene {
     this.typo.setMetrics(r.cellW, r.cellH);
   }
 
-  setEnergy(e, offset = 0) {
+  // `end` (segundos de la canción) recorta el análisis al tramo, igual que sliceEnergy al exportar.
+  setEnergy(e, offset = 0, end = Infinity) {
     if (!e) {
       this.energy = null;
       return;
@@ -93,7 +94,8 @@ export class Scene {
     // drops e intensidad de sección: se analizan desde donde empieza el tramo. El estudio entrega toda la canción con un
     // `offset`; el archivo exportado, solo el tramo desde 0. Así los dos parten del mismo cuadro y calculan lo mismo.
     const i0 = clamp(Math.floor(offset * e.fps), 0, Math.max(0, n - 2));
-    const from = (a) => (i0 ? (a.subarray ? a.subarray(i0) : a.slice(i0)) : a);
+    const i1 = Number.isFinite(end) ? clamp(Math.ceil(end * e.fps) + 1, i0 + 2, n) : n;
+    const from = (a) => (i0 || i1 < n ? (a.subarray ? a.subarray(i0, i1) : a.slice(i0, i1)) : a);
     const an = analyzeDrops({ fps: e.fps, low: from(e.low), mid: from(e.mid), hi: from(e.hi), hit: from(e.hit) });
     const drops = new Float32Array(an.drops.length);
     for (let k = 0; k < drops.length; k++) drops[k] = an.drops[k] + i0 / e.fps - offset; // en tiempo del tramo
@@ -452,6 +454,7 @@ export class Scene {
       const cur = this.r.tint;
       if (cur[0] !== ta[0]) this.r.setTint(ta[0], ta[1]);
     }
+    love *= smooth(0, 0.3, this.react);
     if (love > 0.02) drawLove(g, t, love * brt, E);
     if (this.floorOn) drawFloor(g, t, E, 0.9);
     // anillo de caracteres con cada bombo fuerte (el ambiente «pulse» ya dibuja los suyos)
@@ -534,7 +537,7 @@ export class Scene {
     // el drop le da un golpe al corazón: se hincha y da una vuelta (la vuelta completa termina igual que empezó)
     const dropAge = E.dropIdx >= 0 && !R.reduced ? E.dropAge : 99;
     const beat = pulse * 1.15 + E.drop * 1.6 * k;
-    const spin = dropAge < SPIN_SEC ? TAU * easeOutCubic(dropAge / SPIN_SEC) * k : 0;
+    const spin = k > 0.02 && dropAge < SPIN_SEC ? TAU * easeOutCubic(dropAge / SPIN_SEC) : 0;
 
     const heartSize = (s) => Math.min(rows * s, cols * s * 0.9);
     const rot = (tt) => (R.reduced ? 0 : tt * 0.55 + Math.sin(tt * 0.8) * 0.28 + spin);

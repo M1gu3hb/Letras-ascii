@@ -3009,3 +3009,13 @@ html.js #boot-status { margin: 0; color: var(--muted); font: 700 14px var(--ui);
 .studio[data-tab='mark'] .stagedice, .theater .stagedice { display: none; }
 @media (pointer: coarse) { .stage .stagedice, .stage .stagefs { width: 44px; height: 44px; } .stage .stagedice { right: 60px; } .stage .stagetag { right: 112px; } }
 @media (prefers-reduced-motion: reduce) { .stage .stagedice.rolled .ic { animation: none; } }
+/* escenario angosto (formato vertical en teléfono): no caben dado, pantalla completa y etiqueta en una fila.
+   El dado queda en Estilo y la etiqueta baja a su propia fila, debajo del botón de pantalla completa. */
+@container (max-width: 300px) {
+  .stage .stagedice { display: none; }
+  .stage .stagetag { top: 56px; left: 6px; right: 6px; justify-content: flex-start; }
+}
+@container (max-width: 300px) {
+  .stage .tagseg { max-width: 100%; }
+  .stage .tagseg button { min-width: 0; padding: 4px 6px; font-size: 10px; }
+}

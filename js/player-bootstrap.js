@@ -17,7 +17,7 @@ function b64ToBytes(b64) {
 function mediaControls(player, title) {
   const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
   if (!ms) return { sync() {}, off() {} };
-  const handlers = { play: () => { if (player.state !== 'playing') void player.tap(); }, pause: () => { if (player.state === 'playing') player.pause(); } };
+  const handlers = { play: () => { if (player.state !== 'playing') void player.tap(); else if (player.audio.paused) void player.audio.play().catch(() => {}); }, pause: () => { if (player.state === 'playing') player.pause(); } };
   for (const [action, fn] of Object.entries(handlers)) { try { ms.setActionHandler(action, fn); } catch { /* acción no soportada */ } }
   try { if (typeof MediaMetadata === 'function') ms.metadata = new MediaMetadata({ title, artwork: coverArt() }); } catch { /* sin metadatos */ }
   return {
