@@ -2994,7 +2994,7 @@ summary {
 .export-checks .ctx { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .export-checks .ctx b { font-weight: 800; }
 .export-checks .ctx small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.export-checks li .btn { flex: none; min-height: 40px; }
+.export-checks li .btn { flex: none; min-height: 44px; }
 .export-actions { display: grid; gap: 10px; margin: 16px 0 10px; }
 .btn.export-download { min-height: 58px; font-size: 16.5px; border-radius: 16px; }
 .btn.export-download .ic { width: 22px; height: 22px; }
