@@ -1,6 +1,6 @@
 // Cuenta regresiva 3-2-1 del paso Marcar: secuencia, cancelar (botón y Esc), apagarla, teclado (barra espaciadora) y táctil.
 // El flujo completo (marcas exactas, fin de frase, pausa…) está en mark-flow.mjs. Solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 const { srv, port } = serve('site');
 const b = await launch();
 const errs = [];

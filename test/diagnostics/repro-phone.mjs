@@ -1,7 +1,7 @@
 // Diagnóstico de la pantalla en teléfono (393×736, como el de Miguel): mide el escenario, el lienzo y la rejilla en
 // cada formato y pestaña, y deja capturas en test/audit/<TAG>-*.png. Solo texto inventado y audio sintético.
-//   TAG=antes node test/repro-phone.mjs      (SITE=<carpeta> para usar otro sitio, por defecto «site»)
-import { serve, launch, watch } from './lib.mjs';
+//   TAG=antes node test/diagnostics/repro-phone.mjs      (SITE=<carpeta> para usar otro sitio, por defecto «site»)
+import { serve, launch, watch } from '../lib.mjs';
 import { mkdirSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });
 const TAG = process.env.TAG || 'repro';

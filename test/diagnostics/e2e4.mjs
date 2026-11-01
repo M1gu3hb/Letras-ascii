@@ -1,4 +1,4 @@
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 import { statSync } from 'node:fs';
 const { srv, port } = serve('site');
 const b = await launch();

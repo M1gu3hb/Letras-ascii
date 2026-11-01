@@ -1,6 +1,6 @@
 // Grosor de las letras: más grueso = más tinta, más fino = menos; nada se corta; hoja de contacto por tipografía.
 // Solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 import { mkdirSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });
 const { srv, port } = serve('site');

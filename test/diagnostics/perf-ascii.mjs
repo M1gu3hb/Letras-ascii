@@ -1,5 +1,5 @@
 // Costo de los controles de ASCII: reconstruir con grosor y cuadros por segundo con más detalle. Solo texto inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 const { srv, port } = serve('site');
 const b = await launch();
 const errs = [];

@@ -1,7 +1,7 @@
 // Auditoría de UI: capturas de cada pestaña en varios tamaños + reproducción del salto de scroll al marcar.
 // Usa solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
-import {openMarkOptions} from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
+import {openMarkOptions} from '../lib.mjs';
 import { mkdirSync } from 'node:fs';
 const OUT = process.env.OUT || 'test/audit';
 mkdirSync(OUT, { recursive: true });

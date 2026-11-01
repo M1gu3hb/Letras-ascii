@@ -1,6 +1,6 @@
 // Vista previa tipo tutorial: «Ejemplo» (se mueve sola), «Mi letra» (tiempos automáticos) y comportamiento con canción.
 // Solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 import { mkdirSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });
 const { srv, port } = serve('site');

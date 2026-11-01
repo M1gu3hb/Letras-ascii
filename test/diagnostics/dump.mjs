@@ -6,7 +6,7 @@ const mime = { '.html': 'text/html', '.js': 'text/javascript', '.woff2': 'font/w
 const srv = createServer((req, res) => { const f = join(process.cwd(), decodeURIComponent(req.url.split('?')[0])); if (!existsSync(f) || statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'content-type': mime[extname(f)] || 'application/octet-stream' }); res.end(readFileSync(f)); }).listen(0);
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
 const pg = await b.newPage({ viewport: { width: 960, height: 540 } });
-await pg.goto(`http://localhost:${srv.address().port}/test/harness.html?${process.argv[2] || ''}`);
+await pg.goto(`http://localhost:${srv.address().port}/test/diagnostics/harness.html?${process.argv[2] || ''}`);
 await pg.waitForFunction(() => document.documentElement.dataset.ready === '1');
 console.log(await pg.evaluate(() => window.__scene.tl.units.map((u) => `${u.i} t=${u.t.toFixed(2)} end=${u.end.toFixed(2)} hide=${u.hideAt.toFixed(2)} exit=${u.exit} [${u.words.map((w) => w.text + ':' + w.appear + '/' + (w.fxs || []).join('+') + (w.held ? '/H' : '')).join(' ')}]`).join('\n')));
 await b.close(); srv.close();

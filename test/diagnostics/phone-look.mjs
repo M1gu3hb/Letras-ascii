@@ -1,5 +1,5 @@
 // Hoja de contacto en pantalla de teléfono: grosor × detalle, para ver cuál se ve menos «gordo». Solo texto inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 const { srv, port } = serve('site');
 const b = await launch();
 const errs = [];

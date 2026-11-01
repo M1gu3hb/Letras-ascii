@@ -21,7 +21,7 @@ const pg = await b.newPage({ viewport: { width: W, height: H } });
 const errs = [];
 pg.on('pageerror', (e) => errs.push(String(e)));
 pg.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-await pg.goto(`http://localhost:${port}/test/harness.html?${query}`);
+await pg.goto(`http://localhost:${port}/test/diagnostics/harness.html?${query}`);
 await pg.waitForFunction(() => document.documentElement.dataset.ready === '1', null, { timeout: 15000 });
 console.log(await pg.evaluate(() => JSON.stringify(window.__tl())));
 for (const t of times) {

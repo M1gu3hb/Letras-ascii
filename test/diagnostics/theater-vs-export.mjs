@@ -1,6 +1,6 @@
 // «Así se verá»: la pantalla completa del estudio debe ser lo mismo que se ve al abrir el HTML exportado en esa misma pantalla.
 // Se comparan, píxel por píxel, los mismos instantes. Solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 import { statSync } from 'node:fs';
 const { srv, port } = serve('site');
 const b = await launch();

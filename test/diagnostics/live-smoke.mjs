@@ -1,7 +1,7 @@
 // Prueba de humo contra una URL ya publicada (copia de prueba o en vivo): que cargue, que las tipografías
 // lleguen, que no haya errores, que no lleve canción ni letra, y que la pantalla completa («Ver en grande») abra
 // en teléfono y en compu. Solo audio sintético y texto inventado.
-//   TARGET=https://... TAG=prev node test/live-smoke.mjs
+//   TARGET=https://... TAG=prev node test/diagnostics/live-smoke.mjs
 import { chromium } from 'playwright-core';
 import { mkdirSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });

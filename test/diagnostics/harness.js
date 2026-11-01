@@ -1,6 +1,6 @@
-import { Scene } from '../js/scene.js';
-import { newProject, modelOf, phrasesOf } from '../js/project.js';
-import { SAMPLE_TEXT, sampleSync, fakeEnergy } from '../js/synth.js';
+import { Scene } from '../../js/scene.js';
+import { newProject, modelOf, phrasesOf } from '../../js/project.js';
+import { SAMPLE_TEXT, sampleSync, fakeEnergy } from '../../js/synth.js';
 
 const fonts = ['800 48px Nunito','900 48px Nunito','italic 900 48px "Playfair Display"','400 48px Pacifico','400 48px Anton','700 48px Caveat','900 48px Unbounded','900 48px Cinzel','400 14px "JetBrains Mono"','700 14px "JetBrains Mono"'];
 async function boot() {

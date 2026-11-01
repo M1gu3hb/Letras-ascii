@@ -1,12 +1,12 @@
 import { chromium } from 'playwright-core';
-import { serve } from './lib.mjs';
-import { launch } from './lib.mjs';
+import { serve } from '../lib.mjs';
+import { launch } from '../lib.mjs';
 const { srv, port } = serve('.');
 const b = await launch();
 const pg = await b.newPage({ viewport: { width: 960, height: 540 } });
 const errs = [];
 pg.on('pageerror', (e) => errs.push(String(e)));
-await pg.goto(`http://localhost:${port}/test/harness.html?fx=0`);
+await pg.goto(`http://localhost:${port}/test/diagnostics/harness.html?fx=0`);
 await pg.waitForFunction(() => document.documentElement.dataset.ready === '1');
 // unidades: 'enciende' (unit 1 'se enciende' t≈1.22), 'despacio' t=2.02, 'late fuerte' t=3.12, 'tambor'
 const cases = [

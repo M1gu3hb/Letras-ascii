@@ -1,6 +1,6 @@
 // Paso Marcar en teléfonos ACOSTADOS (de 568×320 a 915×412): todo lo que se toca cabe sin desplazar y es legible.
 // Capturas en test/audit/land-*.png. Solo texto de prueba inventado y audio sintético.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 import { mkdirSync } from 'node:fs';
 mkdirSync('test/audit', { recursive: true });
 const { srv, port } = serve('site');

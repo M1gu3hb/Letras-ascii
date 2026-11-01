@@ -1,7 +1,7 @@
 // El aspecto por defecto NO debe cambiar: se compara, pixel por pixel, el sitio de antes de los controles
 // de ASCII (carpeta pasada en OLD) contra el sitio nuevo con los mismos datos y los mismos instantes.
 // Solo texto de prueba inventado.
-import { serve, launch, watch } from './lib.mjs';
+import { serve, launch, watch } from '../lib.mjs';
 const OLD = process.env.OLD;
 if (!OLD) {
   console.log('Falta OLD=<carpeta con el sitio anterior>');
