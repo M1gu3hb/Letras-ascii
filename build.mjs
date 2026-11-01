@@ -1,6 +1,6 @@
 // Arma el sitio estático en site/ : index.html + app.js + app.css + fonts/.
-// El reproductor player.js y app.css se incrustan en el HTML final que se descarga.
-import { build } from 'esbuild';
+// El reproductor player.js y player.css (solo lo que necesita la página del destinatario) se incrustan en el HTML final que se descarga.
+import { build, transform } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { editorDocument, crawlerFiles } from './scripts/site-document.mjs';
@@ -28,6 +28,8 @@ const fonts = [
   font('Cinzel', 900, 'cinzel-latin-900-normal.woff2'),
 ].join('\n');
 const css = fonts + '\n' + readFileSync('css/style.css', 'utf8') + '\n' + readFileSync('css/mobile.css', 'utf8');
+// el HTML exportado no lleva el CSS del editor: mismas tipografías + css/player.css
+const playerCss = fonts + '\n' + (await transform(readFileSync('css/player.css', 'utf8'), { loader: 'css', minify: !process.env.NOMIN, legalComments: 'none' })).code;
 
 const html = editorDocument({ preview: !!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production' });
 mkdirSync('site/fonts', { recursive: true });
@@ -38,8 +40,9 @@ for (const [entry, output] of [['js/player-entry.js', 'player.js'], ['js/audio-w
   writeFileSync('site/' + output, result.outputFiles[0].text);
 }
 writeFileSync('site/app.css', css);
+writeFileSync('site/player.css', playerCss);
 writeFileSync('site/index.html', html);
 for (const [name, content] of Object.entries(crawlerFiles())) writeFileSync('site/' + name, content);
 for (const name of ['favicon.svg', 'social-card.png']) copyFileSync('assets/' + name, 'site/' + name);
 const sha = (s) => createHash('sha1').update(s).digest('hex').slice(0, 10);
-console.log(`site/app.js ${(js.length / 1024).toFixed(0)} KB (${sha(js)})  site/app.css ${(css.length / 1024).toFixed(0)} KB (${sha(css)})`);
+console.log(`site/app.js ${(js.length / 1024).toFixed(0)} KB (${sha(js)})  site/app.css ${(css.length / 1024).toFixed(0)} KB (${sha(css)})  site/player.css ${(playerCss.length / 1024).toFixed(0)} KB (${sha(playerCss)})`);
