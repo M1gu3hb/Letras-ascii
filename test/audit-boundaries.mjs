@@ -119,7 +119,7 @@ try{
   assert.equal(await page.locator('[aria-label="Velocidad para corregir"]').inputValue(),'.75');
  });
  await check('variation-controls-consistency',async()=>{
-  await fixture('style');await page.getByRole('button',{name:'Sutil',exact:true}).click();
+  await fixture('style');const options=page.locator('.variation-opts');if(!(await options.getAttribute('open')!==null))await options.locator('summary').click();await page.getByRole('button',{name:'Sutil',exact:true}).click();
   assert.equal(await page.locator('[aria-label="Qué tan al azar cambian letras y animaciones"]').inputValue(),'0.15');
  });
  await check('real-beat-count',async()=>{

@@ -12,13 +12,15 @@ export function buildNavigation(app) {
     footer.hidden = app.tab === 'mark';
     back.hidden = i === 0;
     let destination = STEPS[Math.min(i + 1, STEPS.length - 1)];
-    let label = i === 5 ? 'Revisar sincronización' : 'Siguiente: ' + LABELS[Math.min(i + 1, 5)];
+    let label = i === 5 ? 'Revisar tiempos' : 'Siguiente: ' + LABELS[Math.min(i + 1, 5)];
     if (i === 5) destination = 'mark';
     if (i === 0 && !app.media) { label = 'Elegir canción o video'; destination = null; }
     if (i === 1 && !n) { label = 'Escribe la letra para continuar'; destination = null; }
     if (i === 1 && n && !app.media) { label = 'Primero: cargar canción'; destination = 'song'; }
     if (i === 4) { label = 'Siguiente: Exportar'; destination = 'export'; }
     next.textContent = label; next.disabled = i === 1 && !n;
+    // en Exportar la acción principal es descargar (está en el panel): aquí volver a revisar es secundario
+    next.classList.toggle('primary', i !== 5); next.classList.toggle('ghost', i === 5);
     next.onclick = () => destination ? app.selectTab(destination, { focus: true }) : app.panels.song.input.click();
     note.textContent = i === 0 ? (app.media ? 'Elige el tramo que quieres usar.' : 'Crea un detalle con tu canción y letra.') : i === 1 ? 'Una frase por línea. Luego la sincronizas.' : i === 4 ? 'Reproduce para revisar el diseño.' : i === 3 ? 'Ajuste opcional: escucha, corrige y continúa a Estilo.' : 'Descarga el HTML con audio y letra para conservarlo o compartirlo.';
     for (const [index, id] of STEPS.entries()) {

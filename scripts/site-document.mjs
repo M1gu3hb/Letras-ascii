@@ -11,7 +11,7 @@ export function editorDocument({ preview = false } = {}) {
 <html lang="es"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07040b">
+<meta name="theme-color" content="#03050b">
 <meta name="description" content="${description}">
 <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
 <link rel="canonical" href="${SITE_URL}">
@@ -32,6 +32,7 @@ export function editorDocument({ preview = false } = {}) {
 <meta name="twitter:image" content="${SITE_URL}social-card.png">
 <meta name="twitter:image:alt" content="Letras en ASCII: letras sincronizadas y karaoke">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="app.css">
 <script type="application/ld+json">${JSON.stringify(schema)}</script>
 </head><body>

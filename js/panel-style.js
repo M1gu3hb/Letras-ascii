@@ -1,4 +1,4 @@
-// Paso 4: laboratorio. Todo lo que cambia cómo se ve y cómo reacciona, con vista en vivo en el escenario.
+// Paso 5: estilo. Todo lo que cambia cómo se ve y cómo reacciona, con vista en vivo en el escenario.
 import { h, toast, slider, toggle, segmented, chips, field } from './ui.js';
 import { defaultStyle, ASCII_KEYS, ASCII_PRESETS, asciiPresetValues, asciiPresetOf, MOOD_LABELS, MOOD_NAMES, FACE_LABELS, FACE_NAMES, PALETTES, PALETTE_LABELS, FILL_LABELS, WORDFX_LABELS } from './project.js';
 import { FILL_CHARS } from './grid.js';
@@ -178,13 +178,8 @@ export class StylePanel {
       },
     });
     this.seedLab = h('span', { class: 'muted small' });
-    const other = h('button', { class: 'btn', type: 'button', onclick: () => {
-      app.project.seed = (app.project.seed | 0) + 1;
-      this.paintSeed();
-      app.projectChanged();
-    } }, '🎲 Otra versión');
     this.reading = readingControls(app);
-    this.versions = versionControls(app, () => other.click());
+    this.versions = versionControls(app, () => { app.project.seed = (app.project.seed | 0) + 1; this.paintSeed(); app.projectChanged(); });
     const clean = h('button', { class: 'btn ghost', type: 'button', onclick: () => {
       if (!Object.keys(app.project.over).length) return toast('No hay cambios hechos a mano.');
       if (!confirm('¿Quitar los cambios que hiciste palabra por palabra?')) return;
@@ -204,8 +199,7 @@ export class StylePanel {
     this.el = h(
       'div',
       { class: 'pane' },
-      h('h2', {}, 'Laboratorio'),
-      h('p', { class: 'muted small' }, 'Elige un ajuste rápido y afina lo que necesites. La vista conserva el instante pausado. Pulsa reproducir para comprobar el resultado con tu canción.'),
+      h('h2', {}, 'Estilo'),
       this.versions.element,
       ...this.reading.elements,
       group('Qué se ve', field('Lo grande en pantalla', ctl.focus), ctl.ball, ctl.floor),

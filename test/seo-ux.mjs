@@ -85,7 +85,7 @@ try{
    const panelHeight=await page.locator('.panel').evaluate(el=>el.clientHeight);await view.click();ok(await page.locator('.panel').evaluate(el=>el.clientHeight)>panelHeight,'tablet-p: folding preview returns space to editing');
   }
   await page.getByRole('button',{name:'Siguiente: Exportar',exact:true}).click();
-  await page.getByRole('tabpanel').focus();await page.keyboard.press('Tab');await page.keyboard.press('Tab');await focused(page,'.pane:not([hidden]) > .row .primary');
+  await page.getByRole('tabpanel').focus();await page.keyboard.press('Tab');await focused(page,'.pane:not([hidden]) .export-actions .primary');
   ok(await page.getByRole('button',{name:'Descargar el HTML',exact:true}).evaluate(el=>el===document.activeElement),`${name}: Download is reachable through the native keyboard order`);
   await page.screenshot({path:`${folder}/export-${name}-${kind}.png`});
   ok(await within(page.getByRole('button',{name:'Descargar el HTML',exact:true})),`${name}: download is reachable without a hidden overlay`);

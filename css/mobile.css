@@ -3,7 +3,7 @@
 .wordspane .zoomrow { flex-wrap: nowrap; overflow-x: auto; padding: 3px; }
 .wordspane .zoomrow .btn { flex-shrink: 0; min-height: 44px; }
 @media (max-width: 899px), (max-height: 520px) {
-  .wordspane .wtop { position: sticky; top: -1px; z-index: 5; background: #10091a; padding-bottom: 8px; border-bottom: 1px solid var(--line2); }
+  .wordspane .wtop { position: sticky; top: -1px; z-index: 5; background: #080d1a; padding-bottom: 8px; border-bottom: 1px solid var(--line2); }
   .wordspane .wtop .strip { --sh: clamp(85px,18dvh,148px); }
   .wordspane.condensed .wtop .pht { display: none; }
   .wordspane.condensed .wtop .strip { --sh: 80px; }
@@ -127,10 +127,10 @@
   .studio .markpane > .mtop { grid-area: top; }
   .studio .markpane > .mprog { grid-area: prog; margin: 0; }
   .studio .markpane > .mbtns { grid-area: btns; }
-  .studio .markpane .pad { border-radius: 18px; background: var(--rose); color: #250c18; }
+  .studio .markpane .pad { border-radius: 18px; background: var(--accent); color: var(--on-accent); }
   .studio .markpane .pad .padtxt { font-size: clamp(38px,12vw,56px); }
-  .studio .markpane .pad .padsub { color: #391222; font: 700 14px/1.4 var(--ui); padding: 0 16px; }
-  .studio .markpane .pad.down { background: var(--amber); transform: none; }
+  .studio .markpane .pad .padsub { color: rgba(255, 255, 255, 0.82); font: 700 14px/1.4 var(--ui); padding: 0 16px; }
+  .studio .markpane .pad.down { background: var(--accent-2); transform: none; }
   .studio .markpane[data-phase='done'] > .mzone { flex: 1 0 auto; }
 }
 
@@ -155,8 +155,8 @@
   }
   .studio .markpane > .mstage { min-height: 0; }
   .studio .markpane > .mzone { min-height: 0; }
-  .studio .markpane .pad { background: var(--rose); color: #250c18; }
-  .studio .markpane .pad .padsub { color: #391222; }
+  .studio .markpane .pad { background: var(--accent); color: var(--on-accent); }
+  .studio .markpane .pad .padsub { color: rgba(255, 255, 255, 0.82); }
 }
 
 @media (max-width: 600px), (max-width: 1000px) and (max-height: 520px) {
@@ -166,4 +166,21 @@
   }
   .studio .markpane .mcard.count .cnum { font-size: clamp(48px,12dvh,96px); line-height: 1; }
   .studio .markpane .mcard.count .btn { min-height: 44px; }
+}
+
+/* Teléfono: cabecera compacta (solo iconos; el nombre accesible no cambia) y transporte con iconos. */
+@media (max-width: 600px) {
+  .studio .top .hbtn { flex: 0 0 44px; width: 44px; padding: 0; }
+  .studio .top .hbtn .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .studio .top .hbtn .ic { width: 20px; height: 20px; }
+  .studio .top .pname { flex: 1 1 auto; }
+  .studio .trow.main .tbtn.play { border-radius: 50%; width: 44px; }
+  .studio .trow.main .preview-toggle { width: auto; }
+  .studio .panel { padding-top: 14px; }
+  .btn.surprise { min-height: 72px; }
+  .export-checks li { padding: 10px 12px; }
+}
+@media (max-width: 600px) {
+  .studio .brand { display: flex; margin-right: 0; }
+  .studio .brand .txt { display: none; }
 }
