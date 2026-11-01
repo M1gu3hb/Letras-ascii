@@ -1,4 +1,5 @@
 import { h, field, select, segmented, slider, toggle, chips, toast } from './ui.js';
+import { icon } from './icons.js';
 import { APPEAR_LABELS, FACE_LABELS, COLOR_LABELS } from './project.js';
 export function readingControls(app) {
   const controls = {};
@@ -23,13 +24,24 @@ export function readingControls(app) {
 export function versionControls(app, onGenerate) {
   const levels = segmented([['0.15','Sutil'],['0.45','Equilibrado'],['0.85','Intenso']], String(app.project.style.random), value => { app.project.style.random = +value; app.projectChanged(); }, 'Intensidad de la variación');
   const groups = chips([['faces','Fuentes'],['colors','Colores'],['backgrounds','Fondos'],['animations','Animaciones']], app.project.style.randomGroups, value => { app.project.style.randomGroups = value; app.projectChanged(); });
-  const undo = h('button',{class:'btn',type:'button',onclick:()=>app.history.undo()},'Deshacer');
-  const redo = h('button',{class:'btn',type:'button',onclick:()=>app.history.redo()},'Rehacer');
+  const undo = h('button',{class:'btn small ghost',type:'button',title:'Volver a la versión anterior',onclick:()=>app.history.undo()},icon('undo'),'Deshacer');
+  const redo = h('button',{class:'btn small ghost',type:'button',title:'Recuperar la versión que deshiciste',onclick:()=>app.history.redo()},icon('redo'),'Rehacer');
   const update = () => { undo.disabled=!app.history.past.length; redo.disabled=!app.history.future.length; };
   app.on('history',update); update();
+  // El botón grande del paso: cambia tipografías, colores, fondos y animaciones a la vez y enseña el resultado al momento.
+  const surprise = h('button',{class:'btn surprise',type:'button',onclick:()=>{
+    if (!app.project.style.randomGroups.length) return toast('Elige al menos un grupo para variar.');
+    onGenerate();
+    surprise.classList.remove('rolled'); void surprise.offsetWidth; surprise.classList.add('rolled');
+    app.showcase();
+  }},icon('dice','dice'),h('span',{class:'surprise-txt'},h('b',{},'Sorpréndeme'),h('small',{},'Generar otra versión')));
+  const watch = h('button',{class:'btn watch',type:'button',onclick:()=>app.showcase({fullscreen:true})},icon('expand'),'Ver cómo queda');
+  const options = h('details',{class:'variation-opts'},h('summary',{},'Qué puede cambiar'),h('div',{class:'gbody'},field('Intensidad',levels),field('Qué puede variar',groups)));
   return { element:h('section',{class:'version-controls','aria-label':'Variaciones de diseño'},
-    h('div',{class:'row wrap'},h('button',{class:'btn primary',type:'button',onclick:()=>app.project.style.randomGroups.length ? onGenerate() : toast('Elige al menos un grupo para variar.')},'Generar otra versión'),undo,redo),
-    levels, field('Qué puede variar',groups), h('button',{class:'btn ghost',type:'button',onclick:async()=>{ if(await app.save()) toast('Versión guardada en este navegador.'); }},'Conservar esta versión'),
-    h('p',{class:'muted small'},'Tus cambios por palabra y los ajustes de lectura se conservan. Deshacer recupera la versión anterior.')),
+    h('p',{class:'vc-lead'},'Prueba combinaciones de letra, color, fondo y animación. Cada toque arma una versión nueva y la reproduce para que la veas.'),
+    surprise,
+    h('div',{class:'vc-row'},watch,undo,redo),
+    options,
+    h('button',{class:'btn ghost small keep',type:'button',onclick:async()=>{ if(await app.save()) toast('Versión guardada en este navegador.'); }},icon('check'),'Conservar esta versión')),
     sync(){levels.set(String(app.project.style.random));groups.set(app.project.style.randomGroups)} };
 }

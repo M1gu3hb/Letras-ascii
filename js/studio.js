@@ -14,6 +14,7 @@ import { SAMPLE_TEXT, sampleSync, autoSync, fakeEnergy } from './synth.js';
 import { wavOf, blobUrl } from './audio.js';
 import * as store from './store.js';
 import { h, debounce, toast } from './ui.js';
+import { icon } from './icons.js';
 import { SongPanel } from './panel-song.js';
 import { TextPanel } from './panel-text.js';
 import { MarkPanel } from './panel-mark.js';
@@ -139,10 +140,12 @@ export class App {
     this.tag = h('div', { class: 'stagetag' }, this.tagTxt, this.tagSeg);
     this.stageCd = h('div', { class: 'stagecd', hidden: true, 'aria-hidden': 'true' });
     // pantalla completa: el mismo escenario, a todo lo que da la pantalla (así se ve el HTML ya exportado)
-    this.fsBtn = h('button', { class: 'stagefs', type: 'button', 'aria-label': 'Ver en pantalla completa', title: 'Pantalla completa (tecla F)', onclick: () => this.openTheater() }, h('span', { class: 'fsic', 'aria-hidden': 'true' }), h('span', { class: 'fslab', 'aria-hidden': 'true' }, 'Ver en grande'));
-    this.stage = h('div', { class: 'stage', id: 'stage' }, this.canvas, this.tag, this.stageCd, this.fsBtn);
-    this.playBtn = h('button', { class: 'tbtn play', type: 'button', 'aria-label': 'Reproducir', onclick: () => this.togglePlay() }, '▶');
-    this.restartBtn = h('button', { class: 'tbtn restart', type: 'button', 'aria-label': 'Volver al inicio del tramo', onclick: () => this.restart() }, 'Inicio');
+    this.fsBtn = h('button', { class: 'stagefs', type: 'button', 'aria-label': 'Ver en pantalla completa', title: 'Pantalla completa (tecla F)', onclick: () => this.openTheater() }, icon('expand', 'fsic'), h('span', { class: 'fslab', 'aria-hidden': 'true' }, 'Ver en grande'));
+    // dado sobre el escenario: otra versión al azar desde cualquier paso, y se ve al instante
+    this.diceBtn = h('button', { class: 'stagedice', type: 'button', 'aria-label': 'Sorpréndeme: otra versión al azar', title: 'Sorpréndeme: otra versión al azar', onclick: () => this.surprise() }, icon('dice'));
+    this.stage = h('div', { class: 'stage', id: 'stage' }, this.canvas, this.tag, this.stageCd, this.diceBtn, this.fsBtn);
+    this.playBtn = h('button', { class: 'tbtn play', type: 'button', 'aria-label': 'Reproducir', onclick: () => this.togglePlay() }, icon('play'));
+    this.restartBtn = h('button', { class: 'tbtn restart', type: 'button', 'aria-label': 'Volver al inicio del tramo', title: 'Volver al inicio', onclick: () => this.restart() }, icon('restart'));
     this.timeEl = h('span', { class: 'time' }, '0:00.0 / 0:30.0');
     this.scrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'scrub', 'aria-label': 'Posición en el tramo' });
     this.tScrub = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'tscrub', 'aria-label': 'Posición en el tramo' });
@@ -157,7 +160,7 @@ export class App {
       });
       el.addEventListener('change', () => (this.scrubbing = false));
     }
-    this.loopBtn = h('button', { class: 'tbtn', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Repetir el tramo', onclick: () => this.setLoop(!this.player.loopClip) }, '↻');
+    this.loopBtn = h('button', { class: 'tbtn', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Repetir el tramo', title: 'Repetir el tramo', onclick: () => this.setLoop(!this.player.loopClip) }, icon('loop'));
     this.rateSel = h('select', { class: 'rate', 'aria-label': 'Velocidad' }, [['1', '1×'], ['0.75', '0.75×'], ['0.5', '0.5×']].map(([v, t]) => h('option', { value: v }, t)));
     this.rateSel.addEventListener('change', () => this.setRate(+this.rateSel.value));
     const fmtSel = h('select', { class: 'rate', 'aria-label': 'Forma de la pantalla' }, Object.entries(FORMATS).map(([k, v]) => h('option', { value: k }, v[2])));
@@ -168,8 +171,8 @@ export class App {
       this.applyFormat();
     });
     this.mobilePreviewChoices = {};
-    this.previewToggle = h('button', { class: 'tbtn preview-toggle', type: 'button', 'aria-label': 'Mostrar vista previa', 'aria-expanded': 'false', onclick: () => { this.mobilePreviewChoices[this.tab] = this.root.dataset.preview !== 'open'; this.paintMobilePreview(); } }, 'Vista');
-    this.moreBtn = h('button', { class: 'tbtn moreBtn', type: 'button', 'aria-label': 'Más controles', 'aria-expanded': 'false', onclick: () => this.toggleMore() }, '⋯');
+    this.previewToggle = h('button', { class: 'tbtn preview-toggle', type: 'button', 'aria-label': 'Mostrar vista previa', 'aria-expanded': 'false', onclick: () => { this.mobilePreviewChoices[this.tab] = this.root.dataset.preview !== 'open'; this.paintMobilePreview(); } }, icon('eye', 'show-ic'), icon('eyeOff', 'hide-ic'));
+    this.moreBtn = h('button', { class: 'tbtn moreBtn', type: 'button', 'aria-label': 'Más controles', 'aria-expanded': 'false', onclick: () => this.toggleMore() }, icon('more'));
     this.transport = h(
       'div',
       { class: 'transport' },
@@ -184,10 +187,10 @@ export class App {
       this.project.name = this.nameEl.value;
       this.saveSoon();
     });
-    this.projBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.openProjects() }, 'Mis proyectos');
-    this.newBtn = h('button', { class: 'btn small ghost', type: 'button', onclick: () => this.newAndReset() }, 'Nuevo');
-    this.helpBtn = h('button', { class: 'btn small ghost help-btn', type: 'button', 'aria-label': 'Guía de uso', title: 'Guía de uso', onclick: () => openGuide(this) }, h('span', { 'aria-hidden': 'true' }, '?'));
-    const top = h('header', { class: 'top' }, h('h1', { class: 'sr-only' }, 'Letras en ASCII: letras sincronizadas y karaoke'), h('div', { class: 'brand' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, '▚'), h('span', { class: 'txt' }, 'Letras en ASCII')), this.nameEl, this.projBtn, this.newBtn, this.helpBtn, this.savedEl);
+    this.projBtn = h('button', { class: 'btn small ghost hbtn', type: 'button', title: 'Mis proyectos', onclick: () => this.openProjects() }, icon('folder'), h('span', { class: 'lbl' }, 'Mis proyectos'));
+    this.newBtn = h('button', { class: 'btn small ghost hbtn', type: 'button', title: 'Nuevo proyecto', onclick: () => this.newAndReset() }, icon('plus'), h('span', { class: 'lbl' }, 'Nuevo'));
+    this.helpBtn = h('button', { class: 'btn small ghost hbtn help-btn', type: 'button', 'aria-label': 'Guía de uso', title: 'Guía de uso', onclick: () => openGuide(this) }, icon('help'));
+    const top = h('header', { class: 'top' }, h('h1', { class: 'sr-only' }, 'Letras en ASCII: letras sincronizadas y karaoke'), h('div', { class: 'brand' }, h('span', { class: 'mark', 'aria-hidden': 'true' }, icon('heart')), h('span', { class: 'txt' }, 'Letras en ASCII')), this.nameEl, this.projBtn, this.newBtn, this.helpBtn, this.savedEl);
     this.tabsEl = h('nav', { class: 'tabs', role: 'tablist', 'aria-label': 'Pasos' });
     this.tabBtns = {};
     for (const [id, n, label] of TABS) {
@@ -211,9 +214,9 @@ export class App {
 
     // vista a pantalla completa (se llena al abrirla: el escenario se muda aquí y vuelve al cerrar)
     this.thost = h('div', { class: 'thost' });
-    this.tPlay = h('button', { class: 'tbtn tplay', type: 'button', 'aria-label': 'Reproducir', onclick: () => this.togglePlay() }, '▶');
+    this.tPlay = h('button', { class: 'tbtn tplay', type: 'button', 'aria-label': 'Reproducir', onclick: () => this.togglePlay() }, icon('play'));
     this.tTime = h('span', { class: 'ttime' }, '0:00.0 / 0:30.0');
-    this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, h('span', { class: 'xic', 'aria-hidden': 'true' }));
+    this.tClose = h('button', { class: 'tbtn tclose', type: 'button', 'aria-label': 'Cerrar pantalla completa', title: 'Cerrar (Esc)', onclick: () => this.closeTheater() }, icon('close'));
     this.tBar = h('div', { class: 'tbar' }, this.tPlay, this.tTime, this.tScrub);
     this.theater = h('div', { class: 'theater', hidden: true, role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Vista previa en pantalla completa', tabindex: '-1' }, this.thost, this.tBar, this.tClose);
     this.skipLink = h('a', { class: 'skip-link', href: '#panel-song', tabindex: '0' }, 'Saltar al paso actual');
@@ -295,12 +298,51 @@ export class App {
   }
 
   paintMobilePreview() {
-    const open = this.mobilePreviewChoices[this.tab] ?? this.tab === 'style';
+    // la vista previa es lo que inspira: abierta por defecto; en «Ajustar» se pliega para dejar sitio a la tira de tiempo.
+    // En pantallas bajitas (teléfono acostado, zoom alto) el panel necesita todo el ancho: solo «Estilo» la abre sola.
+    const short = window.matchMedia?.('(max-height: 520px)').matches;
+    const open = this.mobilePreviewChoices[this.tab] ?? (short ? this.tab === 'style' : this.tab !== 'words');
     this.root.dataset.preview = open ? 'open' : 'closed';
     this.previewToggle.setAttribute('aria-expanded', String(open));
     this.previewToggle.setAttribute('aria-label', open ? 'Ocultar vista previa' : 'Mostrar vista previa');
     this.previewToggle.classList.toggle('on', open);
     if (this.scene) requestAnimationFrame(() => { if (!this.destroyed) { if (open && this.needRebuild && !this.stageHidden()) this.rebuild(); this.scene.resize(); this.syncDemo(); } });
+  }
+
+  // Otra versión al azar (tipografías, colores, fondos y animaciones según lo permitido en Estilo) y la enseña.
+  surprise() {
+    if (this.destroyed) return;
+    if (!this.project.style.randomGroups?.length) { toast('En Estilo, elige al menos un grupo para variar.'); return; }
+    this.project.seed = (this.project.seed | 0) + 1;
+    this.panels.style?.paintSeed();
+    this.projectChanged();
+    this.diceBtn.classList.remove('rolled'); void this.diceBtn.offsetWidth; this.diceBtn.classList.add('rolled');
+    this.showcase();
+  }
+
+  // Enseña el resultado: abre la vista previa (en el teléfono), la hace brillar y arranca desde el principio.
+  // Con canción marcada suena de verdad (el clic es el gesto que el navegador pide); sin ella, el ejemplo animado vuelve a empezar.
+  showcase({ fullscreen = false } = {}) {
+    if (this.destroyed) return;
+    if (this.tab !== 'mark') { this.mobilePreviewChoices[this.tab] = true; this.paintMobilePreview(); }
+    if (fullscreen) this.openTheater();
+    this.stage.classList.remove('glow-in');
+    void this.stage.offsetWidth;
+    this.stage.classList.add('glow-in');
+    clearTimeout(this.glowT);
+    this.glowT = setTimeout(() => this.stage.classList.remove('glow-in'), 1200);
+    this.demoHold = false;
+    if (this.media && this.previewKind() === 'real') {
+      this.preparePlayback();
+      if (this.audioFull && !this.audioFull.paused) this.audioFull.pause();
+      this.panels.words?.audition.stop();
+      this.player.start(0);
+    } else {
+      this.rebuildSoon.flush();
+      if (this.player.demo) this.player.demoT0 = performance.now() / 1000;
+      this.syncDemo();
+    }
+    if (this.theaterOn) this.pokeBar();
   }
 
   toggleMore(force) {
@@ -383,7 +425,7 @@ export class App {
   paintPlayIcons() {
     const playing = this.player.state === 'playing';
     for (const b of [this.playBtn, this.tPlay]) {
-      b.replaceChildren(playing ? h('span', { class: 'pauseic' }, h('i'), h('i')) : '▶');
+      b.replaceChildren(icon(playing ? 'pause' : 'play', playing ? 'pauseic' : ''));
       b.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
     }
     return playing;
@@ -534,7 +576,7 @@ export class App {
 
   refreshEnergy() {
     const clip = this.clip();
-    if (this.media && (!this.player.demo || this.kind === 'real')) this.scene.setEnergy(this.media.energy, clip.start);
+    if (this.media && (!this.player.demo || this.kind === 'real')) this.scene.setEnergy(this.media.energy, clip.start, clip.end);
     else this.scene.setEnergy(fakeEnergy(clip.end - clip.start + 2), 0);
   }
   refreshAudio() {
@@ -612,7 +654,7 @@ export class App {
     this.root.inert = true;
     for (const panel of Object.values(this.panels)) panel.destroy?.();
     this.scope.destroy();
-    clearInterval(this.ticker); clearTimeout(this.barT);
+    clearInterval(this.ticker); clearTimeout(this.barT); clearTimeout(this.glowT);
     this.rebuildSoon.cancel(); this.refreshAudioSoon.cancel();
     retireMediaUrl(this.audio, this.clipUrl); retireMediaUrl(this.audioFull, this.fullUrl);
     this.clipUrl = this.fullUrl = null;

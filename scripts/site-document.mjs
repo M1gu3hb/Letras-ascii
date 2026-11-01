@@ -11,7 +11,7 @@ export function editorDocument({ preview = false } = {}) {
 <html lang="es"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07040b">
+<meta name="theme-color" content="#03050b">
 <meta name="description" content="${description}">
 <meta name="robots" content="${preview ? 'noindex, nofollow' : 'index, follow'}">
 <link rel="canonical" href="${SITE_URL}">
@@ -32,6 +32,7 @@ export function editorDocument({ preview = false } = {}) {
 <meta name="twitter:image" content="${SITE_URL}social-card.png">
 <meta name="twitter:image:alt" content="Letras en ASCII: letras sincronizadas y karaoke">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="app.css">
 <script type="application/ld+json">${JSON.stringify(schema)}</script>
 </head><body>
@@ -48,7 +49,7 @@ ${GUIDE_FAQ.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}
 <audio id="audio" playsinline preload="auto"></audio>
 <audio id="audioFull" playsinline preload="auto"></audio>
 <script id="payload" type="application/json">null</script>
-<script src="app.js" defer></script>
+<script src="app.js" defer onerror="document.documentElement.classList.remove('js');var s=document.getElementById('boot-status');if(s)s.textContent='No se pudo cargar el editor. Revisa tu conexión y recarga la página.'"></script>
 </body></html>\n`;
 }
 

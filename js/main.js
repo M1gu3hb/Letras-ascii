@@ -30,4 +30,9 @@ async function boot() {
   if (payload && payload.sync) await bootPlayer(payload);
   else await bootStudio();
 }
-boot();
+boot().catch(() => {
+  // sin editor no hay portada que esperar: se vuelve a la guía legible y se avisa
+  document.documentElement.classList.remove('js');
+  const status = $('boot-status');
+  if (status) status.textContent = 'No se pudo abrir el editor. Recarga la página para intentarlo de nuevo.';
+});

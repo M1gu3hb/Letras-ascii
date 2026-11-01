@@ -37,10 +37,14 @@ export class Player {
       else this.finish();
     }, { signal: this.scope.signal });
     audio.addEventListener('seeked', () => { if (!audio.seeking) { this.seekTarget = null; this.lastCT = -1; } }, { signal: this.scope.signal });
+    // al volver a la pestaña el navegador ya soltó el wake lock: se pide de nuevo si sigue sonando
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && this.state === 'playing') void this.keepAwake(); }, { signal: this.scope.signal });
     if (mode === 'player') {
+      // Espacio y Enter, con la página enfocada (no solo el lienzo); sin repetir al mantenerlas y sin pisar atajos ni controles nativos
       const act = (e) => {
         if (e.type === 'keydown') {
-          if (e.code !== 'Space' || e.repeat) return;
+          if (e.code !== 'Space' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
+          if (e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
           const tg = e.target;
           if (tg && tg.closest && tg.closest('textarea, input, select, button, a, [contenteditable]')) return;
           e.preventDefault();

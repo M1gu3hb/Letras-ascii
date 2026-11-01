@@ -81,7 +81,7 @@ try{
   check(await page.evaluate(()=>window.__app.player.rate===.5&&window.__app.audio.preservesPitch),`${width}: slow playback preserves pitch and mark seconds`);
   await page.locator('#tab-style').click();
   const keep=await page.evaluate(()=>({seed:window.__app.project.seed,over:structuredClone(window.__app.project.over)}));
-  await page.getByRole('button',{name:'Generar otra versión',exact:true}).click();
+  await page.getByRole('button',{name:/Generar otra versión/}).click();
   assert.equal(await page.evaluate(()=>window.__app.project.seed),keep.seed+1);
   await page.getByRole('button',{name:'Deshacer',exact:true}).click();assert.equal(await page.evaluate(()=>window.__app.project.seed),keep.seed);
   check(true,`${width}: design generation is reversible`);

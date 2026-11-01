@@ -1,0 +1,172 @@
+/* Página del destinatario: solo lo que necesita el lienzo a pantalla completa.
+   build.mjs la une a la lista de @font-face y la publica como site/player.css; export.js la incrusta en el HTML
+   que se descarga (el CSS del editor no viaja). Negro de noche + azul real (#2f5bff).
+   OJO: .fullstage, .sr-only y el reinicio se repiten a propósito respecto a style.css (el editor sigue usándolos). */
+:root {
+  --night: #04050a;
+  --royal: #2f5bff;
+  color-scheme: dark;
+}
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none; /* sin rebote ni «tirar para recargar» */
+  touch-action: manipulation; /* sin zoom por doble toque */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html {
+  /* lo que no cubra el lienzo (y el primer pintado) ya se ve intencional: casi negro con un halo azul muy suave */
+  background: radial-gradient(90% 60% at 50% 42%, rgba(47, 91, 255, 0.2), rgba(47, 91, 255, 0) 72%) no-repeat, var(--night);
+  background-size: 100% 100%;
+  font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #dfe6ff;
+}
+body.playerpage {
+  height: 100vh;
+  height: 100dvh;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ───────── el lienzo ───────── */
+.fullstage {
+  position: fixed;
+  inset: 0;
+  touch-action: pinch-zoom; /* el arrastre dibuja la estela; se puede acercar con dos dedos, sin desplazar ni zoom por doble toque */
+}
+.fullstage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: pointer;
+  touch-action: pinch-zoom;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.fullstage.on canvas {
+  opacity: 1;
+}
+
+/* aro de foco: solo con teclado, azul real y por dentro; un toque o un clic no dejan nada */
+.fullstage canvas:focus:not(:focus-visible) {
+  outline: none;
+}
+.fullstage canvas:focus-visible {
+  outline: 2px solid var(--royal);
+  outline-offset: -3px;
+}
+
+/* ───────── carga: un corazón que late hasta que la escena está lista ───────── */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition: opacity 0.3s ease; /* el corazón se va un poco antes de que la escena termine de aparecer */
+}
+.boot::before {
+  content: '';
+  grid-area: 1 / 1;
+  width: 190px;
+  height: 190px;
+  background: radial-gradient(closest-side, rgba(47, 91, 255, 0.34), rgba(47, 91, 255, 0));
+  animation: boot-glow 1.7s ease-in-out infinite;
+}
+.boot svg {
+  grid-area: 1 / 1;
+  width: 46px;
+  height: 46px;
+  fill: var(--royal);
+  animation: boot-beat 1.7s ease-in-out infinite;
+}
+.fullstage.on ~ .boot {
+  opacity: 0;
+}
+html.failed .boot {
+  display: none;
+}
+@keyframes boot-beat {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  18% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  34% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.95;
+  }
+}
+@keyframes boot-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  18% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+/* si algo falla, o no hay JavaScript, un mensaje tranquilo en vez de un corazón que late para siempre */
+#app:not(.fullstage),
+.nojs {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #9fb2ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot,
+  .fullstage canvas {
+    transition: none;
+  }
+  .boot::before,
+  .boot svg {
+    animation: none;
+  }
+  .boot svg {
+    opacity: 0.85;
+  }
+}

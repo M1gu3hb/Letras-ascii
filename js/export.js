@@ -5,6 +5,7 @@ import { phrasesOf } from './project.js';
 import { buildTimeline } from './timeline.js';
 import { modelOf } from './project.js';
 import { assetUrl } from './assets.js';
+import { HEART_PATH } from './logo.js';
 
 const MB = 1048576;
 export const ORIGINAL_MAX = 12 * MB;
@@ -68,7 +69,8 @@ async function assets() {
     if (!r.ok) throw new Error('No pude leer ' + name + ' del sitio. Recarga la página e intenta de nuevo.');
     return r.text();
   };
-  const [js, css0] = await Promise.all([get('player.js'), get('app.css')]);
+  // player.css = tipografías + lo mínimo de la página del destinatario (no el CSS entero del editor)
+  const [js, css0] = await Promise.all([get('player.js'), get('player.css')]);
   return { js, css: await inlineFonts(css0) };
 }
 
@@ -87,7 +89,11 @@ async function inlineFonts(css) {
   return css.replace(re, (_, u) => `url(${data.get(u)})`);
 }
 
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// ícono de la pestaña (corazón azul real) y pantalla de carga: el mismo trazo
+const ICON = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#2f5bff" d="${HEART_PATH}"/></svg>`);
+// pantalla de carga: se anima solo con CSS y se retira cuando la escena está lista (ver player-bootstrap.js)
+const BOOT = `<div class="boot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${HEART_PATH}"/></svg></div>`;
 
 // -> { blob, bytes, plan }
 export async function buildHtml(app, { title } = {}) {
@@ -119,13 +125,16 @@ export async function buildHtml(app, { title } = {}) {
   payload.audio = { mime, kind: plan.kind };
   const json = JSON.stringify(payload).replace(/</g, '\\u003c');
   const safeJs = js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
+  const label = esc(name.replace(/\s+/g, ' '));
   const html =
     '<!doctype html>\n<html lang="es"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
+    '<meta name="color-scheme" content="dark"><meta name="theme-color" content="#04050a">' +
     '<meta name="robots" content="noindex, nofollow, noarchive">' +
-    '<meta name="theme-color" content="#07040b"><link rel="icon" href="data:,">' +
-    `<title>${esc(name)}</title><style>${css}</style></head><body class="playerpage">` +
-    '<div id="app"></div><audio id="audio" playsinline preload="auto"></audio>' +
+    `<title>${label}</title><meta property="og:title" content="${label}">` +
+    `<link rel="icon" href="${ICON}"><style>${css}</style></head><body class="playerpage">` +
+    `<div id="app"></div>${BOOT}<audio id="audio" playsinline preload="auto"></audio>` +
+    '<noscript><style>.boot{display:none}</style><div class="nojs">Para ver esto necesitas activar JavaScript.</div></noscript>' +
     `<script id="payload" type="application/json">${json}</script>` +
     `<script id="audio-b64" type="text/plain">${audioB64}</script>` +
     `<script>${safeJs}</script></body></html>`;

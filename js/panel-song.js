@@ -2,6 +2,7 @@
 import { h, toast } from './ui.js';
 import { Wave } from './wave.js';
 import { fmtTime, fmtTimeMs, parseClock } from './project.js';
+import { icon } from './icons.js';
 
 const ACCEPT = 'audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.mp4,.mov,.m4v,.webm,.mkv,.3gp';
 
@@ -18,9 +19,10 @@ export class SongPanel {
     this.drop = h(
       'label',
       { class: 'drop', for: 'songfile' },
-      h('b', {}, 'Sube tu canción o un video'),
-      h('span', {}, 'Arrastra el archivo aquí o toca para elegirlo. También puedo leer el audio de videos compatibles.'),
-      h('small', {}, 'mp3, m4a, wav, ogg, mp4, mov, webm · se queda en tu equipo, no se sube a ningún servidor'),
+      icon('music', 'drop-ic'),
+      h('b', {}, 'Elige tu canción'),
+      h('span', {}, matchMedia('(pointer: coarse)').matches ? 'Toca aquí para buscarla en tu teléfono. También sirve un video: uso su audio.' : 'Arrástrala aquí o haz clic para buscarla. También sirve un video: uso su audio.'),
+      h('small', {}, 'MP3, M4A, WAV, OGG, MP4, MOV o WEBM · se queda en tu equipo, nunca se sube a un servidor'),
     );
     const dz = this.drop;
     ['dragenter', 'dragover'].forEach((ev) =>
@@ -85,7 +87,7 @@ export class SongPanel {
     this.testBtn = h('button', { class: 'btn primary', type: 'button', onclick: () => this.testClip() }, '▶ Probar este tramo');
     this.tip = h('p', { class: 'muted small' }, 'Tip: toca la onda para poner el cursor, dale a «Escuchar» y usa «aquí» para marcar dónde empieza y dónde termina. Lo que marques de la letra se conserva aunque cambies el tramo.');
     this.body = h('div', { class: 'songbody hidden' }, this.info, this.wave.cv, this.zoomRow, h('div', { class: 'row' }, this.listenBtn, this.testBtn), h('div', { class: 'lab2' }, 'Tramo de la canción'), this.presets, this.rangeBox, this.len, this.tip);
-    this.introduction = h('p', { class: 'song-intro muted' }, 'Crea letras animadas en ASCII o texto normal y descarga un HTML con tu canción. Empieza eligiendo un archivo de tu dispositivo.');
+    this.introduction = h('p', { class: 'song-intro muted' }, 'Convierte una canción en un detalle animado: su letra aparece al ritmo de la música y lo mandas como un solo archivo. Empieza por la canción.');
     this.el = h('div', { class: 'pane' }, h('h2', {}, 'Tu canción'), this.introduction, this.input, this.drop, this.body);
 
     app.on('media', () => this.refresh());

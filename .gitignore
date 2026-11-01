@@ -22,3 +22,6 @@ assets/energia.json
 test/audit/
 test/media/
 test/*.png
+
+# copias de trabajo locales de herramientas
+.claude/

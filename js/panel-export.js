@@ -2,16 +2,18 @@
 import { h, toast, fmtBytes, download } from './ui.js';
 import { buildHtml, audioPlan, exportReady, fileNameOf, exportSnapshot } from './export.js';
 import { fmtTime } from './project.js';
+import { icon } from './icons.js';
 
 export class ExportPanel {
   constructor(app) {
     this.app = app;
     this.sum = h('dl', { class: 'sum' });
     this.warn = h('div', { class: 'warn hidden', role: 'alert' });
-    this.prevBtn = h('button', { class: 'btn', type: 'button', onclick: () => this.make('preview') }, 'Vista del destinatario');
-    this.dlBtn = h('button', { class: 'btn primary', type: 'button', 'aria-label': 'Descargar el HTML', onclick: () => this.make('download') }, '⬇ Descargar el HTML');
+    this.prevBtn = h('button', { class: 'btn export-preview', type: 'button', onclick: () => this.make('preview') }, icon('eye'), 'Vista del destinatario');
+    this.dlBtn = h('button', { class: 'btn primary export-download', type: 'button', 'aria-label': 'Descargar el HTML', onclick: () => this.make('download') }, icon('download'), 'Descargar el HTML');
+    this.checks = h('ul', { class: 'export-checks', 'aria-label': 'Lo que lleva tu archivo' });
     this.busy = h('div', { class: 'muted small', role: 'status' });
-    this.recovery = h('div', { class: 'row wrap export-recovery' });
+    this.recovery = h('div', { class: 'row wrap export-recovery', hidden: true });
     this.previewLink = h('a', { class: 'btn', hidden: true, target: '_blank', rel: 'noopener' }, 'Abrir vista del destinatario');
     this.notes = h(
       'div',
@@ -23,7 +25,21 @@ export class ExportPanel {
         h('li', {}, 'Tu canción y tu letra solo viajan dentro de ese archivo; este sitio no los guarda en ningún servidor.'),
       ]),
     );
-    this.el = h('div', { class: 'pane' }, h('h2', {}, 'Exportar'), this.warn, this.recovery, h('div', { class: 'row wrap' }, this.prevBtn, this.dlBtn), this.busy, this.previewLink, this.sum, this.notes);
+    this.details = h('details', { class: 'grp export-details' }, h('summary', {}, 'Detalles del archivo'), h('div', { class: 'gbody' }, this.sum));
+    this.el = h(
+      'div',
+      { class: 'pane export-pane' },
+      h('h2', {}, 'Exportar'),
+      h('p', { class: 'muted export-lead' }, 'Tu detalle se guarda en un solo archivo HTML con la canción adentro. Se abre en cualquier navegador, incluso sin internet.'),
+      this.checks,
+      this.warn,
+      this.recovery,
+      h('div', { class: 'export-actions' }, this.dlBtn, this.prevBtn),
+      this.busy,
+      this.previewLink,
+      this.details,
+      this.notes,
+    );
     ['media', 'clip', 'project', 'reset'].forEach((ev) => app.on(ev, () => { this.clearPreview(); this.paint(); }));
     this.paint();
   }
@@ -43,21 +59,25 @@ export class ExportPanel {
       ...row('Audio en el archivo', plan ? `${plan.label} · ${fmtBytes(plan.bytes)}` : '—'),
     );
     const msgs = [];
-    if (!r.hasSong) msgs.push('Falta subir la canción (paso 1).');
-    if (!r.phrases) msgs.push('Falta la letra (paso 2).');
-    else if (!r.marked) msgs.push('Falta marcar los tiempos de la letra (paso 3).');
-    else if (r.marked < r.phrases) msgs.push(`Faltan ${r.phrases - r.marked} frases por marcar; esas no aparecerán.`);
+    // lo que falta del todo ya lo dice la lista; aquí solo lo que cambia el resultado
+    if (r.marked && r.marked < r.phrases) msgs.push(`Faltan ${r.phrases - r.marked} frases por marcar; esas no aparecerán.`);
     if (r.outside) msgs.push(`${r.outside} frases marcadas quedan fuera del tramo y no aparecerán. Amplía el tramo o ajusta sus tiempos.`);
     if (r.hasSong && r.marked && !r.done) msgs.push('No hay frases visibles en este tramo. Vuelve a Canción para revisarlo.');
     if (plan && plan.bytes > 22 * 1048576) msgs.push('El archivo va a pesar bastante. Si quieres uno más ligero, elige un tramo más corto.');
     this.warn.classList.toggle('hidden', !msgs.length);
     this.warn.replaceChildren(...msgs.map((m) => h('p', {}, m)));
+    // lista de lo que lleva el archivo: cada pendiente trae el botón que lo resuelve
+    const fix = (tab, text) => h('button', { class: 'btn small', type: 'button', onclick: () => app.selectTab(tab, { focus: true }) }, text);
+    const item = (done, title, detail, action) => h('li', { class: done ? 'ok' : 'todo' }, h('span', { class: 'chk', 'aria-hidden': 'true' }, done ? icon('check') : null), h('span', { class: 'ctx' }, h('b', {}, title), h('small', {}, detail)), done ? null : action);
+    this.checks.replaceChildren(
+      item(r.hasSong, 'Canción', r.hasSong ? `${app.media.name} · ${Math.round(clip.end - clip.start)} s` : 'Falta elegirla', fix('song', 'Elegir canción')),
+      item(r.phrases > 0, 'Letra', r.phrases ? `${r.phrases} ${r.phrases === 1 ? 'frase' : 'frases'}` : 'Falta escribirla', fix('text', 'Añadir letra')),
+      item(r.phrases > 0 && r.marked >= r.phrases, 'Tiempos', r.phrases ? `${r.marked} de ${r.phrases} marcadas` : 'Después de escribir la letra', r.phrases ? fix('mark', 'Marcar tiempos') : null),
+    );
+    // con todo listo la lista se vuelve una sola fila y el botón de descarga sube a la vista
+    this.checks.classList.toggle('compact', r.hasSong && r.phrases > 0 && r.marked >= r.phrases);
     const actions = [];
-    const fix = (tab, text) => actions.push(h('button', { class: 'btn small', type: 'button', onclick: () => app.selectTab(tab, { focus: true }) }, text));
-    if (!r.hasSong) fix('song', 'Elegir canción');
-    if (!r.phrases) fix('text', 'Añadir letra');
-    else if (r.marked < r.phrases) fix('mark', 'Marcar tiempos');
-    if (r.hasSong && r.outside) fix('song', 'Revisar tramo');
+    if (r.hasSong && r.outside) actions.push(fix('song', 'Revisar tramo'));
     this.recovery.replaceChildren(...actions); this.recovery.hidden = !actions.length;
     const ok = r.hasSong && r.done > 0 && !this.making;
     this.prevBtn.disabled = !ok;
