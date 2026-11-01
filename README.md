@@ -54,6 +54,8 @@ css/
   player.css                lo único que necesita el HTML exportado
 ```
 
+El HTML exportado solo lleva el reproductor y `player.css`; `player.js` nunca importa el editor ni el almacenamiento. Para montar el editor bajo otra ruta basta conservar sus assets junto a `app.js` (las URLs se resuelven desde el script cargado), y `await app.destroy()` libera reproducción, temporizadores, listeners y URLs.
+
 El mismo `Scene` dibuja la vista previa del editor y el HTML exportado, así que lo que ves al diseñar es lo que recibe la otra persona. Todos los efectos son funciones puras del tiempo y de la energía de la canción: la vista a pantalla completa del editor y el archivo exportado coinciden cuadro a cuadro.
 
 ### Reacción a la música

@@ -53,10 +53,6 @@ body {
 body {
   min-height: 100dvh;
 }
-body.playerpage {
-  overflow: hidden;
-  height: 100dvh;
-}
 .hidden,
 [hidden] {
   display: none !important;
@@ -95,22 +91,6 @@ strong {
   outline: 2px solid var(--accent-2);
   outline-offset: 2px;
 }
-
-/* ───────── página final (la que recibe ella) ───────── */
-.fullstage {
-  position: fixed;
-  inset: 0;
-}
-.fullstage canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  touch-action: manipulation;
-}
-.fullstage canvas[role='button'] { cursor: pointer; touch-action: manipulation; }
-.fullstage canvas[role='button']:focus-visible { outline-offset: -4px; }
 
 /* ───────── estudio ─────────
    Tres formas de acomodarse, según el espacio que haya:

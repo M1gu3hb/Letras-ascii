@@ -112,7 +112,7 @@ try {
       scrollable: document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight, overflow: bs.overflow,
     };
   });
-  check(touch.action === 'none' && touch.select === 'none' && touch.overscroll.every((v) => v === 'none') && !touch.scrollable && touch.overflow === 'hidden', 'phone: no zoom, selection, callout, overscroll or scroll on the canvas page');
+  check(touch.action === 'pinch-zoom' && touch.select === 'none' && touch.overscroll.every((v) => v === 'none') && !touch.scrollable && touch.overflow === 'hidden', 'phone: pinch zoom only (no double-tap zoom, selection, callout, overscroll or scroll) on the canvas page');
 
   const meta = await page.evaluate(() => ({ title: navigator.mediaSession?.metadata?.title, art: navigator.mediaSession?.metadata?.artwork?.length, state: navigator.mediaSession?.playbackState }));
   check(meta.title === 'Para <ti> & "ella"' && meta.art === 1, 'media session: lock-screen title and artwork');

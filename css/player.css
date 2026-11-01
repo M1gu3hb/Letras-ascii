@@ -54,7 +54,7 @@ body.playerpage {
 .fullstage {
   position: fixed;
   inset: 0;
-  touch-action: none; /* el arrastre dibuja la estela; no desplaza ni acerca la página */
+  touch-action: pinch-zoom; /* el arrastre dibuja la estela; se puede acercar con dos dedos, sin desplazar ni zoom por doble toque */
 }
 .fullstage canvas {
   position: absolute;
@@ -63,7 +63,7 @@ body.playerpage {
   height: 100%;
   display: block;
   cursor: pointer;
-  touch-action: none;
+  touch-action: pinch-zoom;
   opacity: 0;
   transition: opacity 0.6s ease;
 }
