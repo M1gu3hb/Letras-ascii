@@ -184,3 +184,10 @@
   .studio .brand { display: flex; margin-right: 0; }
   .studio .brand .txt { display: none; }
 }
+
+/* Teléfono acostado: la barra de tiempo baja a su propia fila para no quedar debajo de los botones. */
+@media (max-height: 520px) and (min-aspect-ratio: 13/10) {
+  .studio .trow.main { flex-wrap: wrap; row-gap: 2px; }
+  .studio .trow.main .scrub { order: 10; flex: 1 0 100%; min-width: 0; height: 28px; margin: 0; }
+  .studio .trow.main .time { flex: 1 1 auto; min-width: 0; text-align: center; }
+}
